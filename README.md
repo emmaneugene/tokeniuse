@@ -1,6 +1,6 @@
-# tokeniuse 🎚️
+# tokeniuse
 
-*token + caniuse* — A terminal dashboard to monitor your AI coding assistant usage limits and API spend.
+A terminal dashboard to monitor your AI coding assistant usage limits and API spend.
 
 Built with [Textual](https://textual.textualize.io/) and [aiohttp](https://docs.aiohttp.org/). Provider logic reimplemented natively in Python from [CodexBar](https://github.com/steipete/CodexBar).
 
@@ -143,7 +143,3 @@ src/tokeniuse/
     ├── provider_card.py     # Per-provider card UI
     └── usage_bar.py         # Color-coded progress bar
 ```
-
-## License
-
-MIT
