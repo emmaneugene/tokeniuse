@@ -110,9 +110,24 @@ async def fetch_claude(timeout: float = 30.0, settings: dict | None = None) -> P
                 currency=extra.get("currency", "USD") or "USD",
             )
 
-    # Infer plan from rate_limit_tier (legacy only)
-    if tier:
-        result.identity = ProviderIdentity(login_method=_infer_plan(tier))
+    # Identity: fetch from OAuth profile API, fall back to legacy tier
+    email = None
+    plan = None
+
+    profile = await _fetch_account_info(access_token, timeout=timeout)
+    if profile:
+        email = profile.get("email")
+        plan = profile.get("plan")
+
+    # Fall back to legacy credentials for plan if profile API didn't provide one
+    if not plan and tier:
+        plan = _infer_plan(tier)
+
+    if plan or email:
+        result.identity = ProviderIdentity(
+            account_email=email,
+            login_method=plan,
+        )
 
     result.source = f"oauth ({source})"
     result.updated_at = datetime.now(timezone.utc)
@@ -139,7 +154,9 @@ async def _resolve_access_token(
                 # Refresh failed — fall through to legacy sources
                 own_creds = None
         if own_creds and own_creds.get("access_token"):
-            return own_creds["access_token"], "own", None
+            # Supplement with rateLimitTier from Claude CLI credentials
+            tier = _get_legacy_rate_limit_tier()
+            return own_creds["access_token"], "own", tier
 
     # 2. Environment variable override
     env_token = os.environ.get("CODEXBAR_CLAUDE_OAUTH_TOKEN")
@@ -167,7 +184,15 @@ async def _resolve_access_token(
     return None, "", None
 
 
-# ── Legacy credential loading (unchanged) ──────────────────
+def _get_legacy_rate_limit_tier() -> Optional[str]:
+    """Read rateLimitTier from Claude CLI credentials (supplementary data)."""
+    legacy = _load_legacy_credentials()
+    if legacy:
+        return legacy.get("rate_limit_tier")
+    return None
+
+
+# ── Legacy credential loading ──────────────────────────────
 
 def _load_legacy_credentials() -> Optional[dict]:
     """Load Claude OAuth credentials from Claude Code CLI files."""
@@ -267,6 +292,108 @@ async def _fetch_oauth_usage(access_token: str, timeout: float = 30.0) -> dict:
                 body = await resp.text()
                 raise RuntimeError(f"HTTP {resp.status}: {body[:200]}")
             return await resp.json()
+
+
+# ── Account info via OAuth profile API ──────────────────────
+
+OAUTH_PROFILE_URL = "https://api.anthropic.com/api/oauth/profile"
+
+
+async def _fetch_account_info(
+    access_token: str,
+    timeout: float = 30.0,
+) -> Optional[dict]:
+    """Fetch account email, plan, and org from the OAuth profile endpoint.
+
+    Returns dict with 'email', 'organization', 'plan' keys, or None.
+    """
+    try:
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "anthropic-beta": BETA_HEADER,
+            "User-Agent": "TokenIUse/0.1.0",
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                OAUTH_PROFILE_URL,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=min(timeout, 10)),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+
+        result: dict = {}
+
+        # Account info
+        account = data.get("account")
+        if isinstance(account, dict):
+            email = (account.get("email") or "").strip()
+            if email:
+                result["email"] = email
+
+            # Infer plan from account flags
+            if account.get("has_claude_max"):
+                result["plan"] = "Claude Max"
+            elif account.get("has_claude_pro"):
+                result["plan"] = "Claude Pro"
+
+        # Organization info
+        org = data.get("organization")
+        if isinstance(org, dict):
+            org_type = (org.get("organization_type") or "").strip()
+            billing = (org.get("billing_type") or "").strip()
+            tier = (org.get("rate_limit_tier") or "").strip()
+
+            # More specific plan from org type
+            if not result.get("plan"):
+                plan = _infer_plan_from_org(org_type, billing, tier)
+                if plan:
+                    result["plan"] = plan
+
+        if result:
+            return result
+    except Exception:
+        pass
+
+    return None
+
+
+def _infer_plan_from_org(
+    org_type: str,
+    billing: str = "",
+    tier: str = "",
+) -> Optional[str]:
+    """Infer Claude plan from organization_type, billing_type, and tier."""
+    ot = org_type.lower()
+    if "max" in ot:
+        return "Claude Max"
+    if "pro" in ot:
+        return "Claude Pro"
+    if "team" in ot:
+        return "Claude Team"
+    if "enterprise" in ot:
+        return "Claude Enterprise"
+
+    # Fallback to tier
+    t = tier.lower()
+    if "max" in t:
+        return "Claude Max"
+    if "pro" in t:
+        return "Claude Pro"
+    if "team" in t:
+        return "Claude Team"
+    if "enterprise" in t:
+        return "Claude Enterprise"
+
+    # Fallback: stripe billing suggests paid plan
+    if "stripe" in billing.lower():
+        return "Claude Pro"
+
+    return None
 
 
 # ── Helpers ────────────────────────────────────────────────
