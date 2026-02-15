@@ -1,4 +1,4 @@
-"""Entry point for tokeniuse — run with `python -m tokeniuse` or `tokeniuse`."""
+"""Entry point for llmeter — run with `python -m llmeter` or `llmeter`."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ from . import __version__
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="tokeniuse",
-        description="tokeniuse — Terminal dashboard for AI coding assistant usage limits.",
+        prog="llmeter",
+        description="llmeter — Terminal dashboard for AI coding assistant usage limits.",
     )
     parser.add_argument(
         "-V", "--version",
         action="version",
-        version=f"tokeniuse {__version__}",
+        version=f"llmeter {__version__}",
     )
     parser.add_argument(
         "--refresh",
@@ -116,9 +116,9 @@ def main() -> None:
         _run_one_shot(config)
         return
 
-    from .app import TokenIUseApp
+    from .app import LLMeterApp
 
-    app = TokenIUseApp(config=config)
+    app = LLMeterApp(config=config)
     app.run()
 
 

@@ -1,7 +1,7 @@
-"""Anthropic OAuth flow for tokeniuse — login once, auto-refresh forever.
+"""Anthropic OAuth flow for llmeter — login once, auto-refresh forever.
 
 Implements the same PKCE-based OAuth flow that pi-mono uses, storing
-credentials in ~/.config/tokeniuse/claude_oauth.json.
+credentials in ~/.config/llmeter/claude_oauth.json.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Optional
 import aiohttp
 
 # OAuth constants — Anthropic's shared public OAuth client ID,
-# used by Claude Code CLI, pi-mono, and tokeniuse alike.
+# used by Claude Code CLI, pi-mono, and llmeter alike.
 _CLIENT_ID_B64 = "OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl"
 CLIENT_ID = base64.b64decode(_CLIENT_ID_B64).decode()
 AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
@@ -31,10 +31,10 @@ _EXPIRY_BUFFER_MS = 5 * 60 * 1000
 
 
 def _creds_path() -> Path:
-    """Path to tokeniuse's own Claude OAuth credentials file."""
+    """Path to llmeter's own Claude OAuth credentials file."""
     xdg = os.environ.get("XDG_CONFIG_HOME", "")
     base = Path(xdg) if xdg else Path.home() / ".config"
-    return base / "tokeniuse" / "claude_oauth.json"
+    return base / "llmeter" / "claude_oauth.json"
 
 
 # ── PKCE helpers ───────────────────────────────────────────
@@ -60,7 +60,7 @@ def _generate_pkce() -> tuple[str, str]:
 # ── Credential persistence ─────────────────────────────────
 
 def load_credentials() -> Optional[dict]:
-    """Load tokeniuse's own Claude OAuth credentials from disk.
+    """Load llmeter's own Claude OAuth credentials from disk.
 
     Returns dict with keys: access_token, refresh_token, expires_at (ms epoch).
     """
@@ -198,7 +198,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
     """
     refresh_token = creds.get("refresh_token")
     if not refresh_token:
-        raise RuntimeError("No refresh token available — run `tokeniuse --login-claude`.")
+        raise RuntimeError("No refresh token available — run `llmeter --login-claude`.")
 
     payload = {
         "grant_type": "refresh_token",

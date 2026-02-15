@@ -1,6 +1,6 @@
-"""Configuration file handling for tokeniuse.
+"""Configuration file handling for llmeter.
 
-Config lives at ~/.config/tokeniuse/config.json (XDG).
+Config lives at ~/.config/llmeter/config.json (XDG).
 
 Example config:
 {
@@ -82,8 +82,8 @@ def config_path() -> Path:
     """Return the config file path, preferring XDG."""
     xdg = os.environ.get("XDG_CONFIG_HOME", "")
     if xdg:
-        return Path(xdg) / "tokeniuse" / "config.json"
-    return Path.home() / ".config" / "tokeniuse" / "config.json"
+        return Path(xdg) / "llmeter" / "config.json"
+    return Path.home() / ".config" / "llmeter" / "config.json"
 
 
 def load_config() -> AppConfig:
@@ -102,7 +102,7 @@ def load_config() -> AppConfig:
         if unknown:
             import sys
             print(
-                f"tokeniuse: ignoring unknown providers in config: {', '.join(unknown)}",
+                f"llmeter: ignoring unknown providers in config: {', '.join(unknown)}",
                 file=sys.stderr,
             )
         cfg.providers = valid
@@ -111,7 +111,7 @@ def load_config() -> AppConfig:
         return cfg
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         import sys
-        print(f"tokeniuse: bad config ({path}): {e} — using defaults", file=sys.stderr)
+        print(f"llmeter: bad config ({path}): {e} — using defaults", file=sys.stderr)
         return AppConfig.default()
 
 

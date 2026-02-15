@@ -1,4 +1,4 @@
-# tokeniuse
+# llmeter
 
 A terminal dashboard to monitor your AI coding assistant usage limits and API spend.
 
@@ -12,7 +12,7 @@ Built with [Textual](https://textual.textualize.io/) and [aiohttp](https://docs.
 - **One-shot mode** — Non-interactive Rich-formatted output for scripts and CI
 - **Theme cycling** — 6 built-in themes (dark, light, monokai, dracula, nord, tokyo-night)
 
-![tokeniuse dashboard](docs/screenshot.png)
+![llmeter dashboard](docs/screenshot.png)
 
 ## Supported Providers
 
@@ -20,8 +20,8 @@ Built with [Textual](https://textual.textualize.io/) and [aiohttp](https://docs.
 
 | Provider | ID | How it works | Auth |
 |----------|----|-------------|------|
-| **Codex** | `codex` | OAuth API (`chatgpt.com/backend-api/api/codex/usage`) | `tokeniuse --login-codex` (one-time OAuth) |
-| **Claude** | `claude` | OAuth API (`api.anthropic.com/api/oauth/usage`) | `tokeniuse --login-claude` (one-time OAuth) |
+| **Codex** | `codex` | OAuth API (`chatgpt.com/backend-api/api/codex/usage`) | `llmeter --login-codex` (one-time OAuth) |
+| **Claude** | `claude` | OAuth API (`api.anthropic.com/api/oauth/usage`) | `llmeter --login-claude` (one-time OAuth) |
 | **Gemini** | `gemini` | Google Cloud Code quota API | `~/.gemini/oauth_creds.json` (Gemini CLI login) |
 
 ### API billing
@@ -34,8 +34,8 @@ Built with [Textual](https://textual.textualize.io/) and [aiohttp](https://docs.
 ## Prerequisites
 
 - Python 3.11+
-- **Codex**: Run `tokeniuse --login-codex` once (or have `codex` CLI installed as fallback)
-- **Claude**: Run `tokeniuse --login-claude` once (or have `claude` CLI logged in as fallback)
+- **Codex**: Run `llmeter --login-codex` once (or have `codex` CLI installed as fallback)
+- **Claude**: Run `llmeter --login-claude` once (or have `claude` CLI logged in as fallback)
 - **Gemini**: `gemini` CLI installed and logged in with Google OAuth
 - **OpenAI API**: Admin API key from [platform.openai.com/settings/organization/admin-keys](https://platform.openai.com/settings/organization/admin-keys)
 - **Anthropic API**: Admin API key from [console.anthropic.com](https://console.anthropic.com) (starts with `sk-ant-admin01-`)
@@ -45,26 +45,26 @@ Built with [Textual](https://textual.textualize.io/) and [aiohttp](https://docs.
 ### Global install with uv (recommended)
 
 ```bash
-uv tool install git+https://github.com/emmaneugene/tokeniuse
+uv tool install git+https://github.com/emmaneugene/llmeter
 ```
 
-This installs `tokeniuse` into an isolated environment and makes the command available globally.
+This installs `llmeter` into an isolated environment and makes the command available globally.
 
 To upgrade later:
 ```bash
-uv tool upgrade tokeniuse
+uv tool upgrade llmeter
 ```
 
 ### Global install with pip / pipx
 
 Using [pipx](https://pipx.pypa.io/) (isolated environment, recommended over bare pip):
 ```bash
-pipx install git+https://github.com/emmaneugene/tokeniuse
+pipx install git+https://github.com/emmaneugene/llmeter
 ```
 
 Or with plain pip:
 ```bash
-pip install git+https://github.com/emmaneugene/tokeniuse
+pip install git+https://github.com/emmaneugene/llmeter
 ```
 
 ### Local development install
@@ -75,11 +75,11 @@ uv venv && uv pip install -e .
 
 ## Configuration
 
-Config file: `~/.config/tokeniuse/config.json`
+Config file: `~/.config/llmeter/config.json`
 
 Generate a default one:
 ```bash
-tokeniuse --init-config
+llmeter --init-config
 ```
 
 ### Example with all providers
@@ -123,13 +123,13 @@ If no config file exists, only `codex` and `claude` are shown by default.
 ### Interactive TUI
 
 ```bash
-tokeniuse
+llmeter
 ```
 
 ### One-shot mode
 
 ```bash
-tokeniuse --one-shot
+llmeter --one-shot
 ```
 
 ### Authentication
@@ -137,23 +137,23 @@ tokeniuse --one-shot
 Both Codex and Claude support one-time OAuth login with automatic token refresh:
 
 ```bash
-tokeniuse --login-codex    # OpenAI Codex (ChatGPT)
-tokeniuse --login-claude   # Anthropic Claude
+llmeter --login-codex    # OpenAI Codex (ChatGPT)
+llmeter --login-claude   # Anthropic Claude
 ```
 
-This opens your browser, stores credentials in `~/.config/tokeniuse/`, and auto-refreshes tokens on each run. No need to re-authenticate unless you explicitly log out:
+This opens your browser, stores credentials in `~/.config/llmeter/`, and auto-refreshes tokens on each run. No need to re-authenticate unless you explicitly log out:
 
 ```bash
-tokeniuse --logout-codex
-tokeniuse --logout-claude
+llmeter --logout-codex
+llmeter --logout-claude
 ```
 
-> **Fallback:** If you don't run `--login-codex`, tokeniuse falls back to JSON-RPC via the `codex` binary. If you don't run `--login-claude`, it tries reading credentials from the Claude Code CLI (`~/.claude/.credentials.json` or macOS Keychain), but those cannot be auto-refreshed.
+> **Fallback:** If you don't run `--login-codex`, llmeter falls back to JSON-RPC via the `codex` binary. If you don't run `--login-claude`, it tries reading credentials from the Claude Code CLI (`~/.claude/.credentials.json` or macOS Keychain), but those cannot be auto-refreshed.
 
 ### All options
 
 ```
-tokeniuse [options]
+llmeter [options]
 
   --refresh SECONDS  Auto-refresh interval (overrides config)
   --one-shot         Print once and exit (Rich-formatted)
@@ -182,7 +182,7 @@ tokeniuse [options]
 ## Architecture
 
 ```
-src/tokeniuse/
+src/llmeter/
 ├── __main__.py              # CLI entry point
 ├── app.py                   # Textual app with auto-refresh
 ├── app.tcss                 # Textual CSS stylesheet

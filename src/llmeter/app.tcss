@@ -1,4 +1,4 @@
-/* tokeniuse — main stylesheet */
+/* llmeter — main stylesheet */
 
 Screen {
     background: $background;

@@ -1,13 +1,13 @@
 """Claude provider — fetches usage via OAuth API with automatic token refresh.
 
 Credential resolution order:
-1. tokeniuse's own OAuth credentials (~/.config/tokeniuse/claude_oauth.json)
+1. llmeter's own OAuth credentials (~/.config/llmeter/claude_oauth.json)
    — supports automatic token refresh via refresh_token
 2. Environment variable override (CODEXBAR_CLAUDE_OAUTH_TOKEN)
 3. Claude Code CLI credentials (~/.claude/.credentials.json or macOS Keychain)
    — read-only fallback, cannot auto-refresh
 
-Run `tokeniuse --login-claude` to authenticate once.  Tokens are refreshed
+Run `llmeter --login-claude` to authenticate once.  Tokens are refreshed
 automatically from then on.
 """
 
@@ -52,7 +52,7 @@ async def fetch_claude(timeout: float = 30.0, settings: dict | None = None) -> P
     if not access_token:
         result.error = (
             "No Claude credentials found. "
-            "Run `tokeniuse --login-claude` to authenticate."
+            "Run `llmeter --login-claude` to authenticate."
         )
         return result
 
@@ -63,7 +63,7 @@ async def fetch_claude(timeout: float = 30.0, settings: dict | None = None) -> P
         error_msg = str(e)
         # If we got a 401 using legacy creds, nudge toward own login
         if "Unauthorized" in error_msg and source == "legacy":
-            error_msg += " Run `tokeniuse --login-claude` for auto-refreshing auth."
+            error_msg += " Run `llmeter --login-claude` for auto-refreshing auth."
         result.error = f"Claude API error: {error_msg}"
         return result
 
@@ -144,7 +144,7 @@ async def _resolve_access_token(
     Returns (access_token, source_label, rate_limit_tier).
     source_label is one of: "own", "env", "legacy".
     """
-    # 1. tokeniuse's own OAuth credentials (with auto-refresh)
+    # 1. llmeter's own OAuth credentials (with auto-refresh)
     own_creds = claude_oauth.load_credentials()
     if own_creds:
         if claude_oauth.is_token_expired(own_creds):
@@ -269,7 +269,7 @@ async def _fetch_oauth_usage(access_token: str, timeout: float = 30.0) -> dict:
         "Accept": "application/json",
         "Content-Type": "application/json",
         "anthropic-beta": BETA_HEADER,
-        "User-Agent": "TokenIUse/0.1.0",
+        "User-Agent": "LLMeter/0.1.0",
     }
 
     async with aiohttp.ClientSession() as session:
@@ -285,7 +285,7 @@ async def _fetch_oauth_usage(access_token: str, timeout: float = 30.0) -> dict:
                 if "user:profile" in body:
                     raise RuntimeError(
                         "Token missing 'user:profile' scope. "
-                        "Re-authenticate with `tokeniuse --login-claude`."
+                        "Re-authenticate with `llmeter --login-claude`."
                     )
                 raise RuntimeError(f"Forbidden (HTTP 403): {body[:200]}")
             if resp.status != 200:
@@ -313,7 +313,7 @@ async def _fetch_account_info(
             "Accept": "application/json",
             "Content-Type": "application/json",
             "anthropic-beta": BETA_HEADER,
-            "User-Agent": "TokenIUse/0.1.0",
+            "User-Agent": "LLMeter/0.1.0",
         }
 
         async with aiohttp.ClientSession() as session:

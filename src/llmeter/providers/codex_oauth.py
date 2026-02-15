@@ -1,8 +1,8 @@
-"""OpenAI Codex OAuth flow for tokeniuse — login once, auto-refresh forever.
+"""OpenAI Codex OAuth flow for llmeter — login once, auto-refresh forever.
 
 Implements the same PKCE-based OAuth flow that Codex CLI / pi-mono uses,
 with a local HTTP callback server on port 1455.  Credentials are stored
-in ~/.config/tokeniuse/codex_oauth.json.
+in ~/.config/llmeter/codex_oauth.json.
 """
 
 from __future__ import annotations
@@ -39,10 +39,10 @@ USAGE_URL = "https://chatgpt.com/backend-api/api/codex/usage"
 
 
 def _creds_path() -> Path:
-    """Path to tokeniuse's own Codex OAuth credentials file."""
+    """Path to llmeter's own Codex OAuth credentials file."""
     xdg = os.environ.get("XDG_CONFIG_HOME", "")
     base = Path(xdg) if xdg else Path.home() / ".config"
-    return base / "tokeniuse" / "codex_oauth.json"
+    return base / "llmeter" / "codex_oauth.json"
 
 
 # ── PKCE helpers ───────────────────────────────────────────
@@ -90,7 +90,7 @@ def extract_account_id(access_token: str) -> Optional[str]:
 # ── Credential persistence ─────────────────────────────────
 
 def load_credentials() -> Optional[dict]:
-    """Load tokeniuse's own Codex OAuth credentials from disk.
+    """Load llmeter's own Codex OAuth credentials from disk.
 
     Returns dict with keys: access_token, refresh_token, expires_at (ms epoch),
     account_id.
@@ -226,7 +226,7 @@ def interactive_login() -> dict:
         "state": state,
         "id_token_add_organizations": "true",
         "codex_cli_simplified_flow": "true",
-        "originator": "tokeniuse",
+        "originator": "llmeter",
     })
     auth_url = f"{AUTHORIZE_URL}?{params}"
 
@@ -351,7 +351,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
     """
     refresh_token = creds.get("refresh_token")
     if not refresh_token:
-        raise RuntimeError("No refresh token available — run `tokeniuse --login-codex`.")
+        raise RuntimeError("No refresh token available — run `llmeter --login-codex`.")
 
     payload = urlencode({
         "grant_type": "refresh_token",

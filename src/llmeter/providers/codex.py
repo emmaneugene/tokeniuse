@@ -1,11 +1,11 @@
 """Codex provider — fetches usage via direct API or JSON-RPC fallback.
 
 Credential resolution order:
-1. tokeniuse's own OAuth credentials (~/.config/tokeniuse/codex_oauth.json)
+1. llmeter's own OAuth credentials (~/.config/llmeter/codex_oauth.json)
    — supports automatic token refresh, calls the usage API directly
 2. JSON-RPC to `codex app-server` (requires codex binary on PATH)
 
-Run `tokeniuse --login-codex` to authenticate once.  Tokens are refreshed
+Run `llmeter --login-codex` to authenticate once.  Tokens are refreshed
 automatically from then on, and the codex binary is no longer required.
 """
 
@@ -56,7 +56,7 @@ async def fetch_codex(timeout: float = 20.0, settings: dict | None = None) -> Pr
         if creds is None:
             result.error = (
                 "No Codex credentials found and codex CLI not on PATH. "
-                "Run `tokeniuse --login-codex` to authenticate."
+                "Run `llmeter --login-codex` to authenticate."
             )
         else:
             result.error = "Codex API request failed and codex CLI not on PATH."
@@ -79,7 +79,7 @@ async def _fetch_via_api(
     headers = {
         "Authorization": f"Bearer {access_token}",
         "chatgpt-account-id": account_id,
-        "User-Agent": "TokenIUse/0.1.0",
+        "User-Agent": "LLMeter/0.1.0",
         "Accept": "application/json",
     }
 
@@ -186,7 +186,7 @@ async def _fetch_via_rpc(
 
     try:
         await client.request("initialize", {
-            "clientInfo": {"name": "tokeniuse", "version": "0.1.0"}
+            "clientInfo": {"name": "llmeter", "version": "0.1.0"}
         })
         await client.notify("initialized")
 

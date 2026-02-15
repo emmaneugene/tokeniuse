@@ -1,4 +1,4 @@
-"""tokeniuse — main Textual application."""
+"""llmeter — main Textual application."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from .widgets.provider_card import ProviderCard
 # ── Help screen ────────────────────────────────────────────
 
 HELP_TEXT = """\
-[bold cyan]tokeniuse — Keyboard Shortcuts[/]
+[bold cyan]llmeter — Keyboard Shortcuts[/]
 
   [bold]r[/]       Refresh all providers
   [bold]t[/]       Cycle theme (dark → light → monokai → …)
@@ -31,7 +31,7 @@ HELP_TEXT = """\
   [bold]q[/]       Quit
 
 [dim]Data is fetched directly from provider APIs.
-Configure providers in ~/.config/tokeniuse/config.json[/]
+Configure providers in ~/.config/llmeter/config.json[/]
 
 [dim]Press [bold]Escape[/bold] to close this dialog.[/]
 """
@@ -75,10 +75,10 @@ class HelpScreen(ModalScreen[None]):
 # ── Main app ───────────────────────────────────────────────
 
 
-class TokenIUseApp(App):
-    """The tokeniuse dashboard application."""
+class LLMeterApp(App):
+    """The llmeter dashboard application."""
 
-    TITLE = "tokeniuse"
+    TITLE = "llmeter"
     SUB_TITLE = "AI Usage Dashboard"
 
     CSS_PATH = "app.tcss"

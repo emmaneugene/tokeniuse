@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tokeniuse"
+name = "llmeter"
 version = "0.1.0"
-description = "tokeniuse — terminal dashboard to monitor AI coding assistant usage limits"
+description = "llmeter — terminal dashboard to monitor AI coding assistant usage limits"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tokeniuse = "tokeniuse.__main__:main"
+llmeter = "llmeter.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/tokeniuse"]
+packages = ["src/llmeter"]

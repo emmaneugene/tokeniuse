@@ -1,4 +1,4 @@
-"""Data models for tokeniuse."""
+"""Data models for llmeter."""
 
 from __future__ import annotations
 
