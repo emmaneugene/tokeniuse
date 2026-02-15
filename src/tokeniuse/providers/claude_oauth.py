@@ -22,8 +22,8 @@ import aiohttp
 _CLIENT_ID_B64 = "OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl"
 CLIENT_ID = base64.b64decode(_CLIENT_ID_B64).decode()
 AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
-TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
-REDIRECT_URI = "https://platform.claude.com/oauth/code/callback"
+TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
+REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback"
 SCOPES = "org:create_api_key user:profile user:inference"
 
 # 5-minute safety buffer before actual expiry
@@ -39,11 +39,21 @@ def _creds_path() -> Path:
 
 # ── PKCE helpers ───────────────────────────────────────────
 
+def _base64url_encode(data: bytes) -> str:
+    """Encode bytes as base64url string (no padding), matching pi-mono's impl."""
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
 def _generate_pkce() -> tuple[str, str]:
-    """Generate a PKCE verifier and challenge pair."""
-    verifier = secrets.token_urlsafe(64)
+    """Generate a PKCE verifier and challenge pair.
+
+    Matches pi-mono's implementation: 32 random bytes → base64url verifier,
+    then SHA-256 of the verifier string → base64url challenge.
+    """
+    verifier_bytes = os.urandom(32)
+    verifier = _base64url_encode(verifier_bytes)
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
-    challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    challenge = _base64url_encode(digest)
     return verifier, challenge
 
 
@@ -132,30 +142,23 @@ def interactive_login() -> dict:
 
     parts = raw.split("#")
     code = parts[0]
-    state = parts[1] if len(parts) > 1 else ""
+    state = parts[1] if len(parts) > 1 else None
 
-    # Exchange code for tokens (synchronous for CLI usage)
-    import urllib.request
+    # Exchange code for tokens
+    import asyncio
 
-    body = json.dumps({
+    payload: dict = {
         "grant_type": "authorization_code",
         "client_id": CLIENT_ID,
         "code": code,
-        "state": state,
         "redirect_uri": REDIRECT_URI,
         "code_verifier": verifier,
-    }).encode()
-
-    req = urllib.request.Request(
-        TOKEN_URL,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    }
+    if state:
+        payload["state"] = state
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            token_data = json.loads(resp.read())
+        token_data = asyncio.run(_exchange_code(payload))
     except Exception as e:
         raise RuntimeError(f"Token exchange failed: {e}") from e
 
@@ -168,6 +171,21 @@ def interactive_login() -> dict:
     save_credentials(creds)
     print(f"✓ Claude OAuth credentials saved to {_creds_path()}")
     return creds
+
+
+async def _exchange_code(payload: dict, timeout: float = 30.0) -> dict:
+    """POST the token exchange request using aiohttp (avoids urllib User-Agent issues)."""
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            TOKEN_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=aiohttp.ClientTimeout(total=timeout),
+        ) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"HTTP {resp.status}: {body[:300]}")
+            return await resp.json()
 
 
 # ── Token refresh ──────────────────────────────────────────
