@@ -75,11 +75,12 @@ class ProviderCard(Widget):
         d = self.data
         version = f" {d.version}" if d.version else ""
         source = f" ({d.source})" if d.source and d.source not in ("unknown", "loading") else ""
+        display_name = f"{d.display_name}*" if d.provider_id == "anthropic-api" else d.display_name
 
         yield Static(
             Text.assemble(
                 (f" {d.icon} ", "bold"),
-                (d.display_name, "bold"),
+                (display_name, "bold"),
                 (version, "dim"),
                 (source, "dim italic"),
             ),

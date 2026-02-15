@@ -36,6 +36,11 @@ Configure providers in ~/.config/tokeniuse/config.json[/]
 [dim]Press [bold]Escape[/bold] to close this dialog.[/]
 """
 
+DELAY_DISCLAIMER = "* May not reflect current usage due to reporting delays"
+DELAY_PRONE_PROVIDER_IDS = {
+    "anthropic-api",
+}
+
 
 class HelpScreen(ModalScreen[None]):
     """Modal overlay showing keybindings and help text."""
@@ -106,6 +111,8 @@ class TokenIUseApp(App):
         yield Header(show_clock=True)
         with ScrollableContainer(id="main-body"):
             yield Vertical(id="provider-list")
+        if any(pcfg.id in DELAY_PRONE_PROVIDER_IDS for pcfg in self._config.providers):
+            yield Static(DELAY_DISCLAIMER, id="legend-bar")
         yield Footer()
 
     def _refresh_interval_text(self) -> str:

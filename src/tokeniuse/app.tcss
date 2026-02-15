@@ -18,6 +18,14 @@ Screen {
 
 /* ── Footer / status bar ─────────────────────────────────── */
 
+#legend-bar {
+    width: 1fr;
+    height: auto;
+    color: $text-muted;
+    text-style: italic;
+    padding: 0 2;
+}
+
 #status-bar {
     dock: bottom;
     height: 1;
