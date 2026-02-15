@@ -117,6 +117,7 @@ async def _fetch_costs(
         "start_time": str(start_ts),
         "end_time": str(end_ts),
         "bucket_width": "1d",
+        "limit": "31",
     }
 
     total = 0.0
@@ -151,8 +152,10 @@ async def _fetch_costs(
                 for result_item in bucket.get("results", []):
                     amount = result_item.get("amount", {})
                     value = amount.get("value", 0.0)
-                    if isinstance(value, (int, float)):
-                        total += value
+                    try:
+                        total += float(value)
+                    except (ValueError, TypeError):
+                        pass
 
             # Pagination: next_page is a token, not a URL
             next_page = data.get("next_page")

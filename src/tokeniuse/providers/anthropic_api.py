@@ -66,9 +66,10 @@ async def fetch_anthropic_api(
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     _, last_day = calendar.monthrange(now.year, now.month)
+    month_end = now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
 
     try:
-        total_spend = await _fetch_cost_report(api_key, month_start, timeout)
+        total_spend = await _fetch_cost_report(api_key, month_start, month_end, timeout)
     except Exception as e:
         result.error = f"Anthropic API error: {e}"
         return result
@@ -104,6 +105,7 @@ async def fetch_anthropic_api(
 async def _fetch_cost_report(
     api_key: str,
     start: datetime,
+    end: datetime,
     timeout: float,
 ) -> float:
     """Fetch cost report and return total spend in USD (dollars)."""
@@ -114,6 +116,7 @@ async def _fetch_cost_report(
     }
 
     start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    end_str = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     total_cents = 0.0
     page_token: Optional[str] = None
@@ -122,6 +125,7 @@ async def _fetch_cost_report(
         while True:
             params: dict = {
                 "starting_at": start_str,
+                "ending_at": end_str,
                 "bucket_width": "1d",
                 "limit": "31",
             }
