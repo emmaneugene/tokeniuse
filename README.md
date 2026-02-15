@@ -172,6 +172,11 @@ tokeniuse [options]
 | `?` | Show help overlay |
 | `q` | Quit |
 
+## Credits
+
+- **[CodexBar](https://github.com/steipete/CodexBar)** —  original inspiration
+- **[pi-mono](https://github.com/badlogic/pi-mono)** - referenced for oauth implementations
+
 ## Architecture
 
 ```
