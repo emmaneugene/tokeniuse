@@ -12,6 +12,8 @@ Built with [Textual](https://textual.textualize.io/) and [aiohttp](https://docs.
 - **One-shot mode** — Non-interactive Rich-formatted output for scripts and CI
 - **Theme cycling** — 6 built-in themes (dark, light, monokai, dracula, nord, tokyo-night)
 
+![tokeniuse dashboard](docs/screenshot.png)
+
 ## Supported Providers
 
 ### CLI usage quotas
