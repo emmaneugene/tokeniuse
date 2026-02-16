@@ -21,29 +21,71 @@ class RateWindow:
         return max(0.0, 100.0 - self.used_percent)
 
     def reset_text(self, now: datetime | None = None) -> str:
-        """Human-readable reset countdown."""
+        """Human-readable reset time in local timezone + relative countdown."""
         if self.resets_at:
-            now = now or datetime.now(timezone.utc)
-            delta = self.resets_at - now
-            secs = max(0, int(delta.total_seconds()))
+            # Use system local timezone by default.
+            now_local = now or datetime.now().astimezone()
+            if now_local.tzinfo is None:
+                now_local = now_local.astimezone()
+
+            reset_dt = self.resets_at
+            # Provider timestamps should be timezone-aware; if not, assume UTC.
+            if reset_dt.tzinfo is None:
+                reset_dt = reset_dt.replace(tzinfo=timezone.utc)
+
+            now_utc = now_local.astimezone(timezone.utc)
+            reset_utc = reset_dt.astimezone(timezone.utc)
+            secs = max(0, int((reset_utc - now_utc).total_seconds()))
             if secs < 60:
                 return "Resets now"
-            mins = secs // 60
-            hours = mins // 60
-            days = hours // 24
-            if days > 0:
-                h = hours % 24
-                return f"Resets in {days}d {h}h" if h else f"Resets in {days}d"
-            if hours > 0:
-                m = mins % 60
-                return f"Resets in {hours}h {m}m" if m else f"Resets in {hours}h"
-            return f"Resets in {mins}m"
+
+            reset_local = reset_utc.astimezone(now_local.tzinfo)
+            relative = self._format_relative(secs)
+
+            if secs >= 24 * 60 * 60:
+                absolute = self._format_date(reset_local)
+            else:
+                absolute = self._format_clock_time(reset_local)
+
+            return f"Resets {absolute} ({relative})"
+
         if self.reset_description:
             desc = self.reset_description.strip()
             if desc.lower().startswith("resets"):
                 return desc
             return f"Resets {desc}"
         return ""
+
+    @staticmethod
+    def _format_clock_time(dt: datetime) -> str:
+        """Format local time as 12-hour clock (e.g. 3am, 3:05pm)."""
+        hour12 = dt.hour % 12 or 12
+        suffix = "am" if dt.hour < 12 else "pm"
+        if dt.minute == 0:
+            return f"{hour12}{suffix}"
+        return f"{hour12}:{dt.minute:02d}{suffix}"
+
+    @staticmethod
+    def _format_date(dt: datetime) -> str:
+        """Format local date as dd Mmm (e.g. 01 Mar)."""
+        return dt.strftime("%d %b")
+
+    @staticmethod
+    def _format_relative(secs: int) -> str:
+        """Format relative remaining time (e.g. 3h 55min)."""
+        mins = secs // 60
+        hours = mins // 60
+        days = hours // 24
+
+        if days > 0:
+            h = hours % 24
+            return f"{days}d {h}h" if h else f"{days}d"
+
+        if hours > 0:
+            m = mins % 60
+            return f"{hours}h {m}min" if m else f"{hours}h"
+
+        return f"{mins}min"
 
 
 @dataclass
