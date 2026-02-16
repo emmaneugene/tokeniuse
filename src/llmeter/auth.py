@@ -84,11 +84,14 @@ def _save_all(data: dict[str, dict]) -> None:
 # ── Per-provider operations ────────────────────────────────
 
 
+VALID_TYPES = {"oauth", "cookie"}
+
+
 def load_provider(provider_id: str) -> Optional[dict]:
     """Load credentials for a single provider, or None."""
     data = load_all()
     creds = data.get(provider_id)
-    if isinstance(creds, dict) and creds.get("type") == "oauth":
+    if isinstance(creds, dict) and creds.get("type") in VALID_TYPES:
         return creds
     return None
 

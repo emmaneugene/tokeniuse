@@ -56,6 +56,16 @@ def main() -> None:
         help="Remove stored Codex OAuth credentials.",
     )
     parser.add_argument(
+        "--login-cursor",
+        action="store_true",
+        help="Store Cursor session cookie (one-time setup).",
+    )
+    parser.add_argument(
+        "--logout-cursor",
+        action="store_true",
+        help="Remove stored Cursor session cookie.",
+    )
+    parser.add_argument(
         "--login-gemini",
         action="store_true",
         help="Authenticate with Gemini via Google OAuth (one-time setup).",
@@ -106,6 +116,19 @@ def main() -> None:
             print("✓ Removed Codex credentials.")
         else:
             print("No Codex credentials stored.")
+        return
+
+    if args.login_cursor:
+        _interactive_cursor_login()
+        return
+
+    if args.logout_cursor:
+        from .providers.cursor_auth import clear_credentials, load_credentials
+        if load_credentials():
+            clear_credentials()
+            print("✓ Removed Cursor credentials.")
+        else:
+            print("No Cursor credentials stored.")
         return
 
     if args.login_gemini:
@@ -263,6 +286,106 @@ def _rich_bar(used_pct: float, width: int = 20) -> str:
     bar_filled = f"[{color}]{'━' * filled}[/{color}]" if filled else ""
     bar_empty = f"[dim]{'─' * empty}[/dim]" if empty else ""
     return f"[dim]\\[[/dim]{bar_filled}{bar_empty}[dim]][/dim]"
+
+
+def _interactive_cursor_login() -> None:
+    """Interactive Cursor cookie login flow."""
+    from .providers.cursor_auth import load_credentials, save_credentials
+
+    existing = load_credentials()
+    if existing:
+        email = existing.get("email", "unknown")
+        print(f"Cursor credentials already stored (email: {email}).")
+        try:
+            answer = input("Replace them? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if answer not in ("y", "yes"):
+            return
+
+    print()
+    print("To get your Cursor session cookie:")
+    print()
+    print("  1. Open https://cursor.com/dashboard in your browser")
+    print("  2. Open DevTools (F12) → Network tab → refresh the page")
+    print("  3. Click any request to cursor.com")
+    print("  4. Find the Cookie header and copy its value")
+    print()
+    print("The cookie should contain 'WorkosCursorSessionToken' or")
+    print("'__Secure-next-auth.session-token'.")
+    print()
+
+    try:
+        cookie = input("Cookie: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\nCancelled.")
+        return
+
+    if not cookie:
+        print("No cookie provided.", file=sys.stderr)
+        sys.exit(1)
+
+    # Strip "Cookie: " prefix if user copied the whole header
+    if cookie.lower().startswith("cookie:"):
+        cookie = cookie[7:].strip()
+
+    # Basic validation
+    valid_names = {
+        "WorkosCursorSessionToken",
+        "__Secure-next-auth.session-token",
+        "next-auth.session-token",
+    }
+    if not any(name in cookie for name in valid_names):
+        print(
+            "⚠ Warning: Cookie does not contain a known Cursor session token.",
+            file=sys.stderr,
+        )
+        print(
+            "  Expected one of: " + ", ".join(sorted(valid_names)),
+            file=sys.stderr,
+        )
+        try:
+            answer = input("Save anyway? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if answer not in ("y", "yes"):
+            return
+
+    save_credentials(cookie)
+    print("✓ Cursor cookie saved to ~/.config/llmeter/auth.json")
+
+    # Try to verify by fetching user info
+    import asyncio
+    try:
+        import aiohttp
+        async def _verify():
+            headers = {
+                "Cookie": cookie,
+                "Accept": "application/json",
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    "https://cursor.com/api/auth/me",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        email = data.get("email")
+                        if email:
+                            save_credentials(cookie, email=email)
+                            return email
+            return None
+
+        email = asyncio.run(_verify())
+        if email:
+            print(f"✓ Verified — logged in as {email}")
+        else:
+            print("⚠ Could not verify cookie (will try on next fetch).")
+    except Exception:
+        print("⚠ Could not verify cookie (will try on next fetch).")
 
 
 if __name__ == "__main__":

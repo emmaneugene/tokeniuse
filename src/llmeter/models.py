@@ -133,6 +133,10 @@ PROVIDERS: dict[str, ProviderMeta] = {
         tertiary_label="Sonnet",
         default_enabled=True,
     ),
+    "cursor": ProviderMeta(
+        id="cursor", name="Cursor", icon="⦿", color="#00bfa5",
+        primary_label="Plan", secondary_label="On-Demand",
+    ),
     "gemini": ProviderMeta(
         id="gemini", name="Gemini", icon="✦", color="#ab87ea",
         primary_label="Pro (24h)", secondary_label="Flash (24h)",

@@ -8,6 +8,7 @@ from typing import Callable, Awaitable
 from .models import ProviderMeta, ProviderResult, PROVIDERS
 from .providers.codex import fetch_codex
 from .providers.claude import fetch_claude
+from .providers.cursor import fetch_cursor
 from .providers.gemini import fetch_gemini
 from .providers.openai_api import fetch_openai_api
 from .providers.anthropic_api import fetch_anthropic_api
@@ -20,6 +21,7 @@ FetchFunc = Callable[..., Awaitable[ProviderResult]]
 PROVIDER_FETCHERS: dict[str, FetchFunc] = {
     "codex": fetch_codex,
     "claude": fetch_claude,
+    "cursor": fetch_cursor,
     "gemini": fetch_gemini,
     "openai-api": fetch_openai_api,
     "anthropic-api": fetch_anthropic_api,
@@ -28,7 +30,7 @@ PROVIDER_FETCHERS: dict[str, FetchFunc] = {
 # Canonical order for all providers (used by init_config and default config).
 # The `default_enabled` flag on each ProviderMeta controls which are active
 # out of the box.
-ALL_PROVIDER_ORDER = ["codex", "claude", "gemini", "openai-api", "anthropic-api"]
+ALL_PROVIDER_ORDER = ["codex", "claude", "cursor", "gemini", "openai-api", "anthropic-api"]
 
 
 _FALLBACK_META = ProviderMeta(id="?", name="Unknown", icon="●", color="#888888")

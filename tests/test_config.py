@@ -73,9 +73,9 @@ class TestAppConfig:
 
     def test_default_has_all_providers(self) -> None:
         cfg = AppConfig.default()
-        assert len(cfg.providers) == 5
+        assert len(cfg.providers) == 6
         assert set(cfg.all_provider_ids) == {
-            "codex", "claude", "gemini", "openai-api", "anthropic-api",
+            "codex", "claude", "cursor", "gemini", "openai-api", "anthropic-api",
         }
 
     def test_default_enables_codex_and_claude_only(self) -> None:
@@ -137,7 +137,7 @@ class TestLoadConfig:
     def test_load_returns_default_when_no_file(self, tmp_config_dir: Path) -> None:
         cfg = load_config()
         assert cfg.provider_ids == ["codex", "claude"]
-        assert len(cfg.providers) == 5
+        assert len(cfg.providers) == 6
 
     def test_load_respects_enabled_flag(self, tmp_config_dir: Path) -> None:
         data = {
