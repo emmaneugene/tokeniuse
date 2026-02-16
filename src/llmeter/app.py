@@ -36,7 +36,7 @@ Configure providers in ~/.config/llmeter/settings.json[/]
 """
 
 DELAY_DISCLAIMER = "* May have reporting delays"
-DELAY_PRONE_PROVIDER_IDS = {
+DELAY_PROVIDER_IDS = {
     "anthropic-api",
 }
 
@@ -110,7 +110,7 @@ class LLMeterApp(App):
         yield Header(show_clock=True)
         with ScrollableContainer(id="main-body"):
             yield Vertical(id="provider-list")
-        if any(pcfg.id in DELAY_PRONE_PROVIDER_IDS for pcfg in self._config.enabled_providers):
+        if any(pcfg.id in DELAY_PROVIDER_IDS for pcfg in self._config.enabled_providers):
             yield Static(DELAY_DISCLAIMER, id="legend-bar")
         yield Footer()
 
@@ -208,10 +208,9 @@ class LLMeterApp(App):
                         await container.mount(new_card)
 
                     self._cards[provider_id] = new_card
-
-                self._update_status()
         finally:
             self._pending_provider_ids.discard(provider_id)
+            self._update_status()
             if not self._pending_provider_ids:
                 self._refresh_in_progress = False
                 if self._refresh_queued:
@@ -221,13 +220,19 @@ class LLMeterApp(App):
     def _update_status(self, message: str | None = None) -> None:
         parts = [f"v{__version__}", f"Every {self._refresh_interval_text()}"]
 
+        enabled_ids = [p.id for p in self._config.enabled_providers]
+        total = len(enabled_ids)
+
         if message and not self._providers:
             # First load — show "Refreshing…"
             parts.append(message)
+        elif total == 0:
+            parts.append("No providers enabled")
         else:
-            # Count completed providers
-            loaded = len(self._providers)
-            total = len(self._config.enabled_providers)
+            # Count only providers completed in the current refresh cycle.
+            loaded_ids = [pid for pid in enabled_ids if pid not in self._pending_provider_ids]
+            loaded = len(loaded_ids)
+
             if loaded < total:
                 parts.append(f"Loading {loaded}/{total}")
             else:
@@ -235,8 +240,17 @@ class LLMeterApp(App):
                 self._last_refresh = now
                 parts.append(f"Last: {now.strftime('%H:%M:%S')}")
 
-            ok = len([p for p in self._providers.values() if not p.error])
-            err = len([p for p in self._providers.values() if p.error])
+            ok = 0
+            err = 0
+            for pid in loaded_ids:
+                result = self._providers.get(pid)
+                if result is None:
+                    continue
+                if result.error:
+                    err += 1
+                else:
+                    ok += 1
+
             if ok or err:
                 s = f"{ok} ok"
                 if err:
