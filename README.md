@@ -2,10 +2,12 @@
 
 A CLI tool to monitor your LLM subscription and API limits.
 
+![llmeter demo](docs/demo.png)
+
 ## Features
 
 - **Multiple providers** — Codex, Claude, Gemini CLI quotas, OpenAI & Anthropic API billing
-- **Self-contained auth** — Login once with OAuth or manually enter cookies/API keys. no external dependencies.
+- **Self-contained auth** — Login once with OAuth or manually enter cookies/API keys. No external dependencies.
 - **Interactive or static** — Color-coded usage bars with reset countdowns, auto-refreshing
 - **Config-driven** — JSON config controls which providers are shown and in what order
 
@@ -33,30 +35,42 @@ A CLI tool to monitor your LLM subscription and API limits.
 
 ## Install
 
-### For global use
+### For global usage
+
+Install with `uv`:
 
 ```bash
 # Install
 uv tool install git+https://github.com/emmaneugene/llmeter
 # Upgrade
 uv tool upgrade llmeter
+# Uninstall
+uv tool uninstall llmeter
 ```
 
-### Global install with pip / pipx
-
-Using [pipx](https://pipx.pypa.io/) (isolated environment, recommended over bare pip):
+Or `pipx`:
 
 ```bash
+# Install
 pipx install git+https://github.com/emmaneugene/llmeter
+# Upgrade
+pipx upgrade llmeter
+# Uninstall
+pipx uninstall llmeter
 ```
 
-Or with plain pip:
+Or plain pip:
 
 ```bash
+# Install
 pip install git+https://github.com/emmaneugene/llmeter
+# Upgrade
+pip install --upgrade git+https://github.com/emmaneugene/llmeter
+# Uninstall
+pip uninstall llmeter
 ```
 
-### Local development install
+### Local development
 
 ```bash
 uv venv && uv pip install -e ".[dev]"
