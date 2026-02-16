@@ -19,7 +19,7 @@ from ..models import (
     RateWindow,
 )
 from . import claude_oauth
-from .helpers import parse_iso8601
+from .helpers import parse_iso8601, http_debug_log
 
 OAUTH_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 OAUTH_PROFILE_URL = "https://api.anthropic.com/api/oauth/profile"
@@ -113,12 +113,28 @@ async def _fetch_oauth_usage(access_token: str, timeout: float = 30.0) -> dict:
         "User-Agent": "LLMeter/0.1.0",
     }
 
+    http_debug_log(
+        "claude",
+        "usage_request",
+        method="GET",
+        url=OAUTH_USAGE_URL,
+        headers=headers,
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.get(
             OAUTH_USAGE_URL,
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "claude",
+                "usage_response",
+                method="GET",
+                url=OAUTH_USAGE_URL,
+                status=resp.status,
+            )
+
             if resp.status == 401:
                 raise RuntimeError(
                     "Unauthorized — token may be invalid or expired. "
@@ -152,12 +168,27 @@ async def _fetch_account_info(
             "User-Agent": "LLMeter/0.1.0",
         }
 
+        http_debug_log(
+            "claude",
+            "profile_request",
+            method="GET",
+            url=OAUTH_PROFILE_URL,
+            headers=headers,
+        )
+
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 OAUTH_PROFILE_URL,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=min(timeout, 10)),
             ) as resp:
+                http_debug_log(
+                    "claude",
+                    "profile_response",
+                    method="GET",
+                    url=OAUTH_PROFILE_URL,
+                    status=resp.status,
+                )
                 if resp.status != 200:
                     return None
                 data = await resp.json()

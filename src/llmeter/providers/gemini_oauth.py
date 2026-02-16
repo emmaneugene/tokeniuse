@@ -23,6 +23,7 @@ from urllib.parse import urlencode, urlparse, parse_qs
 import aiohttp
 
 from .. import auth
+from .helpers import http_debug_log
 
 # ── OAuth constants (same as Gemini CLI / pi-mono) ─────────
 # Decoded from base64 for consistency with pi-mono's approach.
@@ -338,13 +339,35 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "grant_type": "refresh_token",
     })
 
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    http_debug_log(
+        "gemini-oauth",
+        "token_refresh_request",
+        method="POST",
+        url=TOKEN_URL,
+        headers=headers,
+        payload={
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        },
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             TOKEN_URL,
             data=body,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "gemini-oauth",
+                "token_refresh_response",
+                method="POST",
+                url=TOKEN_URL,
+                status=resp.status,
+            )
             if resp.status != 200:
                 resp_body = await resp.text()
                 raise RuntimeError(
@@ -428,6 +451,15 @@ async def _discover_project(access_token: str, timeout: float = 30.0) -> str:
         },
     }
 
+    http_debug_log(
+        "gemini-oauth",
+        "discover_load_code_assist_request",
+        method="POST",
+        url=load_url,
+        headers=headers,
+        payload=load_body,
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             load_url,
@@ -435,6 +467,13 @@ async def _discover_project(access_token: str, timeout: float = 30.0) -> str:
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "gemini-oauth",
+                "discover_load_code_assist_response",
+                method="POST",
+                url=load_url,
+                status=resp.status,
+            )
             if resp.status == 200:
                 data = await resp.json()
             else:
@@ -493,6 +532,14 @@ async def _discover_project(access_token: str, timeout: float = 30.0) -> str:
         onboard_body["metadata"]["duetProject"] = env_project
 
     onboard_url = f"{CODE_ASSIST_ENDPOINT}/v1internal:onboardUser"
+    http_debug_log(
+        "gemini-oauth",
+        "onboard_user_request",
+        method="POST",
+        url=onboard_url,
+        headers=headers,
+        payload=onboard_body,
+    )
     async with aiohttp.ClientSession() as session:
         async with session.post(
             onboard_url,
@@ -500,6 +547,13 @@ async def _discover_project(access_token: str, timeout: float = 30.0) -> str:
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "gemini-oauth",
+                "onboard_user_response",
+                method="POST",
+                url=onboard_url,
+                status=resp.status,
+            )
             if resp.status != 200:
                 error_text = await resp.text()
                 raise RuntimeError(f"onboardUser failed (HTTP {resp.status}): {error_text[:300]}")
@@ -546,12 +600,28 @@ async def _poll_operation(
         if attempt > 0:
             await asyncio.sleep(5)
 
+        http_debug_log(
+            "gemini-oauth",
+            "poll_operation_request",
+            method="GET",
+            url=url,
+            headers=headers,
+            message=f"attempt={attempt + 1}/{max_attempts}",
+        )
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 url,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
+                http_debug_log(
+                    "gemini-oauth",
+                    "poll_operation_response",
+                    method="GET",
+                    url=url,
+                    status=resp.status,
+                    message=f"attempt={attempt + 1}/{max_attempts}",
+                )
                 if resp.status != 200:
                     raise RuntimeError(f"Failed to poll operation (HTTP {resp.status})")
                 data = await resp.json()
@@ -565,12 +635,27 @@ async def _poll_operation(
 async def _get_user_email(access_token: str, timeout: float = 10.0) -> Optional[str]:
     """Fetch user email from the Google userinfo endpoint."""
     try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        http_debug_log(
+            "gemini-oauth",
+            "userinfo_request",
+            method="GET",
+            url=USERINFO_ENDPOINT,
+            headers=headers,
+        )
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 USERINFO_ENDPOINT,
-                headers={"Authorization": f"Bearer {access_token}"},
+                headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
+                http_debug_log(
+                    "gemini-oauth",
+                    "userinfo_response",
+                    method="GET",
+                    url=USERINFO_ENDPOINT,
+                    status=resp.status,
+                )
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get("email")

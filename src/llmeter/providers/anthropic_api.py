@@ -24,6 +24,7 @@ from ..models import (
     ProviderResult,
     RateWindow,
 )
+from .helpers import http_debug_log
 
 BASE_URL = "https://api.anthropic.com"
 COST_REPORT_URL = f"{BASE_URL}/v1/organizations/cost_report"
@@ -125,12 +126,27 @@ async def _fetch_cost_report(
             if page_token:
                 params["page"] = page_token
 
+            http_debug_log(
+                "anthropic-api",
+                "cost_report_request",
+                method="GET",
+                url=COST_REPORT_URL,
+                headers=headers,
+                payload=params,
+            )
             async with session.get(
                 COST_REPORT_URL,
                 params=params,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
+                http_debug_log(
+                    "anthropic-api",
+                    "cost_report_response",
+                    method="GET",
+                    url=COST_REPORT_URL,
+                    status=resp.status,
+                )
                 if resp.status == 401:
                     raise RuntimeError(
                         "Unauthorized — check your API key. "

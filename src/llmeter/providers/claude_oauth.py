@@ -1,8 +1,4 @@
-"""Anthropic OAuth flow for llmeter — login once, auto-refresh forever.
-
-Implements the same PKCE-based OAuth flow that pi-mono uses, storing
-credentials in the unified ~/.config/llmeter/auth.json under "anthropic".
-"""
+"""PKCE-based OAuth for Claude subscriptions, referenced from pi-mono"""
 
 from __future__ import annotations
 
@@ -15,6 +11,7 @@ from typing import Optional
 import aiohttp
 
 from .. import auth
+from .helpers import http_debug_log
 
 # OAuth constants — Anthropic's shared public OAuth client ID,
 # used by Claude Code CLI, pi-mono, and llmeter alike.
@@ -155,13 +152,30 @@ def interactive_login() -> dict:
 
 async def _exchange_code(payload: dict, timeout: float = 30.0) -> dict:
     """POST the token exchange request using aiohttp."""
+    headers = {"Content-Type": "application/json"}
+    http_debug_log(
+        "claude-oauth",
+        "token_exchange_request",
+        method="POST",
+        url=TOKEN_URL,
+        headers=headers,
+        payload=payload,
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             TOKEN_URL,
             json=payload,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "claude-oauth",
+                "token_exchange_response",
+                method="POST",
+                url=TOKEN_URL,
+                status=resp.status,
+            )
             if resp.status != 200:
                 body = await resp.text()
                 raise RuntimeError(f"HTTP {resp.status}: {body[:300]}")
@@ -186,13 +200,30 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "refresh_token": refresh_token,
     }
 
+    headers = {"Content-Type": "application/json"}
+    http_debug_log(
+        "claude-oauth",
+        "token_refresh_request",
+        method="POST",
+        url=TOKEN_URL,
+        headers=headers,
+        payload=payload,
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             TOKEN_URL,
             json=payload,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "claude-oauth",
+                "token_refresh_response",
+                method="POST",
+                url=TOKEN_URL,
+                status=resp.status,
+            )
             if resp.status != 200:
                 body = await resp.text()
                 raise RuntimeError(

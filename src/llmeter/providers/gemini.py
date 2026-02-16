@@ -18,7 +18,7 @@ from ..models import (
     RateWindow,
 )
 from . import gemini_oauth
-from .helpers import parse_iso8601
+from .helpers import parse_iso8601, http_debug_log
 
 QUOTA_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
 LOAD_CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist"
@@ -102,16 +102,33 @@ async def _load_code_assist(
 ) -> tuple[Optional[str], Optional[str]]:
     """Call loadCodeAssist to get tier and project ID."""
     try:
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {"metadata": {"ideType": "GEMINI_CLI", "pluginType": "GEMINI"}}
+        http_debug_log(
+            "gemini",
+            "load_code_assist_request",
+            method="POST",
+            url=LOAD_CODE_ASSIST_ENDPOINT,
+            headers=headers,
+            payload=payload,
+        )
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 LOAD_CODE_ASSIST_ENDPOINT,
-                json={"metadata": {"ideType": "GEMINI_CLI", "pluginType": "GEMINI"}},
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json",
-                },
+                json=payload,
+                headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
+                http_debug_log(
+                    "gemini",
+                    "load_code_assist_response",
+                    method="POST",
+                    url=LOAD_CODE_ASSIST_ENDPOINT,
+                    status=resp.status,
+                )
                 if resp.status != 200:
                     return (None, None)
                 data = await resp.json()
@@ -146,16 +163,33 @@ async def _fetch_quota(
     if project_id:
         body["project"] = project_id
 
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    http_debug_log(
+        "gemini",
+        "quota_request",
+        method="POST",
+        url=QUOTA_ENDPOINT,
+        headers=headers,
+        payload=body,
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             QUOTA_ENDPOINT,
             json=body,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "gemini",
+                "quota_response",
+                method="POST",
+                url=QUOTA_ENDPOINT,
+                status=resp.status,
+            )
             if resp.status == 401:
                 raise RuntimeError("Unauthorized — run `llmeter --login-gemini` to re-authenticate.")
             if resp.status != 200:

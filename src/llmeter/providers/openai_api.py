@@ -20,6 +20,7 @@ from ..models import (
     ProviderResult,
     RateWindow,
 )
+from .helpers import http_debug_log
 
 COSTS_URL = "https://api.openai.com/v1/organization/costs"
 
@@ -116,12 +117,27 @@ async def _fetch_costs(
 
     async with aiohttp.ClientSession() as session:
         while True:
+            http_debug_log(
+                "openai-api",
+                "costs_request",
+                method="GET",
+                url=COSTS_URL,
+                headers=headers,
+                payload=params,
+            )
             async with session.get(
                 COSTS_URL,
                 params=params,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
+                http_debug_log(
+                    "openai-api",
+                    "costs_response",
+                    method="GET",
+                    url=COSTS_URL,
+                    status=resp.status,
+                )
                 if resp.status == 401:
                     raise RuntimeError(
                         "Unauthorized — check your API key. "

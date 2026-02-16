@@ -18,6 +18,7 @@ from ..models import (
     RateWindow,
 )
 from . import codex_oauth
+from .helpers import http_debug_log
 
 # The correct endpoint, per CodexBar and codex-rs source:
 # https://chatgpt.com/backend-api/wham/usage
@@ -47,12 +48,26 @@ async def fetch_codex(timeout: float = 20.0, settings: dict | None = None) -> Pr
     }
 
     try:
+        http_debug_log(
+            "codex",
+            "usage_request",
+            method="GET",
+            url=USAGE_URL,
+            headers=headers,
+        )
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 USAGE_URL,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
+                http_debug_log(
+                    "codex",
+                    "usage_response",
+                    method="GET",
+                    url=USAGE_URL,
+                    status=resp.status,
+                )
                 if resp.status == 401:
                     raise RuntimeError(
                         "Unauthorized — token may be invalid or expired. "

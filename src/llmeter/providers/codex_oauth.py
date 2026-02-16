@@ -20,7 +20,7 @@ from urllib.parse import urlencode, urlparse, parse_qs
 import aiohttp
 
 from .. import auth
-from .helpers import decode_jwt_payload
+from .helpers import decode_jwt_payload, http_debug_log
 
 # OAuth constants (same OpenAI Codex OAuth app as Codex CLI / pi-mono)
 CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
@@ -344,13 +344,34 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "client_id": CLIENT_ID,
     })
 
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    http_debug_log(
+        "codex-oauth",
+        "token_refresh_request",
+        method="POST",
+        url=TOKEN_URL,
+        headers=headers,
+        payload={
+            "grant_type": "refresh_token",
+            "client_id": CLIENT_ID,
+            "refresh_token": refresh_token,
+        },
+    )
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             TOKEN_URL,
             data=payload,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
+            http_debug_log(
+                "codex-oauth",
+                "token_refresh_response",
+                method="POST",
+                url=TOKEN_URL,
+                status=resp.status,
+            )
             if resp.status != 200:
                 body = await resp.text()
                 raise RuntimeError(

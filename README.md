@@ -132,6 +132,29 @@ API keys can also be set via environment variables:
 
 If no config file exists, `claude` and `codex` are shown by default.
 
+### HTTP debug logging
+
+To inspect provider HTTP request/response metadata without disrupting the TUI, enable file-based debug logging:
+
+```bash
+LLMETER_DEBUG_HTTP=1 llmeter
+```
+
+Logs are written as JSON lines to:
+
+```
+~/.config/llmeter/debug.log
+```
+
+Optional custom path:
+
+```bash
+LLMETER_DEBUG_HTTP=1 LLMETER_DEBUG_LOG_PATH=/tmp/llmeter-debug.log llmeter
+```
+
+Logs include full request metadata (including auth headers/tokens/cookies when present).
+The debug log file is written with user-only permissions when possible (`0600`).
+
 ## Credits
 
 - **[CodexBar](https://github.com/steipete/CodexBar)** — original inspiration

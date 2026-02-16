@@ -24,6 +24,7 @@ from ..models import (
     RateWindow,
 )
 from . import cursor_auth
+from .helpers import http_debug_log
 
 BASE_URL = "https://cursor.com"
 USAGE_SUMMARY_URL = f"{BASE_URL}/api/usage-summary"
@@ -110,11 +111,25 @@ async def _fetch_json(
     timeout: float,
 ) -> dict:
     """Fetch a JSON endpoint, raising RuntimeError on failure."""
+    http_debug_log(
+        "cursor",
+        "request",
+        method="GET",
+        url=url,
+        headers=headers,
+    )
     async with session.get(
         url,
         headers=headers,
         timeout=aiohttp.ClientTimeout(total=timeout),
     ) as resp:
+        http_debug_log(
+            "cursor",
+            "response",
+            method="GET",
+            url=url,
+            status=resp.status,
+        )
         if resp.status in (401, 403):
             raise RuntimeError(f"HTTP {resp.status}: session expired")
         if resp.status != 200:
