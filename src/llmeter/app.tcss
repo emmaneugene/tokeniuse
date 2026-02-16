@@ -47,12 +47,6 @@ Screen {
     padding: 0 1;
 }
 
-/* ── Provider cards ─────────────────────────────────────── */
-
-ProviderCard {
-    margin-bottom: 1;
-}
-
 /* ── Loading / empty state ──────────────────────────────── */
 
 #loading-indicator {
@@ -80,25 +74,4 @@ ProviderCard {
     padding: 2 4;
 }
 
-/* ── Help overlay ───────────────────────────────────────── */
 
-#help-overlay {
-    align: center middle;
-    width: 60;
-    height: auto;
-    max-height: 80%;
-    background: $surface;
-    border: thick $accent;
-    padding: 2 3;
-    layer: overlay;
-}
-
-#help-overlay .help-title {
-    text-align: center;
-    text-style: bold;
-    margin-bottom: 1;
-}
-
-#help-overlay .help-row {
-    margin-bottom: 0;
-}

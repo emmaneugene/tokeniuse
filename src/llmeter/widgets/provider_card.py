@@ -24,7 +24,7 @@ class ProviderCard(Widget):
         border: round $secondary;
         background: $surface;
         margin-bottom: 1;
-        border-title-align: right;
+        border-title-align: center;
     }
 
     ProviderCard:focus-within {
@@ -84,12 +84,6 @@ class ProviderCard(Widget):
 
     def _build_children(self) -> ComposeResult:
         d = self.data
-
-        if d.source and d.source not in ("unknown", "loading"):
-            yield Static(
-                Text(f"  Source: {d.source}", style="dim italic"),
-                classes="card-meta",
-            )
 
         # Loading placeholder
         if self.is_loading:

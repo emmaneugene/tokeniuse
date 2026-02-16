@@ -212,9 +212,6 @@ def _run_one_shot(config) -> None:
 
         lines: list[str] = []
 
-        if p.source and p.source not in ("unknown", "loading"):
-            lines.append(f"  [dim italic]Source: {p.source}[/dim italic]")
-
         if p.primary:
             pct = p.primary.used_percent
             bar = _rich_bar(pct)
