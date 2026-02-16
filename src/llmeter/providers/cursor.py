@@ -18,7 +18,6 @@ import aiohttp
 
 from ..models import (
     CostInfo,
-    CreditsInfo,
     PROVIDERS,
     ProviderIdentity,
     ProviderResult,

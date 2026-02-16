@@ -13,7 +13,6 @@ import json
 import secrets
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from pathlib import Path
 from threading import Thread, Event
 from typing import Optional
 from urllib.parse import urlencode, urlparse, parse_qs

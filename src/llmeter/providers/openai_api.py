@@ -11,14 +11,12 @@ from __future__ import annotations
 import calendar
 import os
 from datetime import datetime, timezone
-from typing import Optional
 
 import aiohttp
 
 from ..models import (
     CostInfo,
     PROVIDERS,
-    ProviderIdentity,
     ProviderResult,
     RateWindow,
 )

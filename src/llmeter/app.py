@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 
-from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
