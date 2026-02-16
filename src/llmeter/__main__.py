@@ -86,6 +86,8 @@ def main() -> None:
         from .providers.claude_oauth import interactive_login
         try:
             interactive_login()
+            from .config import enable_provider
+            enable_provider("claude")
         except (RuntimeError, KeyboardInterrupt) as e:
             print(f"Login failed: {e}", file=sys.stderr)
             sys.exit(1)
@@ -104,6 +106,8 @@ def main() -> None:
         from .providers.codex_oauth import interactive_login
         try:
             interactive_login()
+            from .config import enable_provider
+            enable_provider("codex")
         except (RuntimeError, KeyboardInterrupt) as e:
             print(f"Login failed: {e}", file=sys.stderr)
             sys.exit(1)
@@ -135,6 +139,8 @@ def main() -> None:
         from .providers.gemini_oauth import interactive_login
         try:
             interactive_login()
+            from .config import enable_provider
+            enable_provider("gemini")
         except (RuntimeError, KeyboardInterrupt) as e:
             print(f"Login failed: {e}", file=sys.stderr)
             sys.exit(1)
@@ -354,7 +360,10 @@ def _interactive_cursor_login() -> None:
             return
 
     save_credentials(cookie)
-    print("✓ Cursor cookie saved to ~/.config/llmeter/auth.json")
+
+    from .config import enable_provider
+    enable_provider("cursor")
+    print("✓ Cursor cookie saved and provider enabled.")
 
     # Try to verify by fetching user info
     import asyncio

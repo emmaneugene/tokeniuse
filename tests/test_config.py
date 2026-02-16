@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from llmeter.config import AppConfig, ProviderConfig, init_config, load_config, config_path
+from llmeter.config import AppConfig, ProviderConfig, enable_provider, init_config, load_config, config_path
 
 
 class TestProviderConfig:
@@ -206,6 +206,68 @@ class TestLoadConfig:
         assert all_ids.index("gemini") < all_ids.index("codex")
         # Auto-discovered come after existing
         assert all_ids.index("codex") < all_ids.index("cursor")
+
+    def test_enable_provider_in_existing_config(self, tmp_config_dir: Path) -> None:
+        """enable_provider should flip enabled=true for a disabled provider."""
+        data = {
+            "providers": [
+                {"id": "codex", "enabled": True},
+                {"id": "cursor", "enabled": False},
+            ],
+        }
+        path = config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data))
+
+        enable_provider("cursor")
+
+        reloaded = json.loads(path.read_text())
+        by_id = {p["id"]: p for p in reloaded["providers"]}
+        assert by_id["cursor"]["enabled"] is True
+        assert by_id["codex"]["enabled"] is True  # unchanged
+
+    def test_enable_provider_appends_if_missing(self, tmp_config_dir: Path) -> None:
+        """enable_provider should append a new entry if provider not listed."""
+        data = {
+            "providers": [{"id": "codex", "enabled": True}],
+        }
+        path = config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data))
+
+        enable_provider("cursor")
+
+        reloaded = json.loads(path.read_text())
+        ids = [p["id"] for p in reloaded["providers"]]
+        assert "cursor" in ids
+        by_id = {p["id"]: p for p in reloaded["providers"]}
+        assert by_id["cursor"]["enabled"] is True
+
+    def test_enable_provider_creates_config_if_missing(self, tmp_config_dir: Path) -> None:
+        """enable_provider should create config.json if it doesn't exist."""
+        path = config_path()
+        assert not path.exists()
+
+        enable_provider("cursor")
+
+        assert path.exists()
+        reloaded = json.loads(path.read_text())
+        by_id = {p["id"]: p for p in reloaded["providers"]}
+        assert by_id["cursor"]["enabled"] is True
+
+    def test_enable_provider_noop_if_already_enabled(self, tmp_config_dir: Path) -> None:
+        data = {
+            "providers": [{"id": "codex", "enabled": True}],
+            "refresh_interval": 120,
+        }
+        path = config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data))
+        original = path.read_text()
+
+        enable_provider("codex")
+
+        assert path.read_text() == original  # file unchanged
 
     def test_load_falls_back_when_nothing_enabled(self, tmp_config_dir: Path) -> None:
         data = {

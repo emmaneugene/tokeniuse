@@ -174,3 +174,39 @@ def init_config() -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n")
     print(f"Created config: {path}")
+
+
+def enable_provider(provider_id: str) -> None:
+    """Enable a provider in config.json, creating the file if needed.
+
+    If the provider isn't listed yet, it is appended.  If it's already
+    enabled, this is a no-op.
+    """
+    path = config_path()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            data = {}
+    else:
+        data = {}
+
+    providers = data.get("providers", [])
+
+    # Find existing entry
+    for p in providers:
+        if p.get("id") == provider_id:
+            if p.get("enabled", True) is True:
+                return  # already enabled
+            p["enabled"] = True
+            break
+    else:
+        # Not listed — append as enabled
+        providers.append({"id": provider_id, "enabled": True})
+
+    data["providers"] = providers
+    if "refresh_interval" not in data:
+        data["refresh_interval"] = 300
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n")
