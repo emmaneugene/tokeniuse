@@ -26,7 +26,7 @@ def main() -> None:
         help="Auto-refresh interval in seconds (60–3600, default: 300).",
     )
     parser.add_argument(
-        "--one-shot",
+        "--snapshot",
         action="store_true",
         help="Fetch and print data once to stdout (no TUI), with Rich formatting.",
     )
@@ -166,8 +166,8 @@ def main() -> None:
             AppConfig.MIN_REFRESH, min(AppConfig.MAX_REFRESH, args.refresh)
         )
 
-    if args.one_shot:
-        _run_one_shot(config)
+    if args.snapshot:
+        _run_snapshot(config)
         return
 
     from .app import LLMeterApp
@@ -176,7 +176,7 @@ def main() -> None:
     app.run()
 
 
-def _run_one_shot(config) -> None:
+def _run_snapshot(config) -> None:
     """Non-interactive mode: fetch data once and print with Rich."""
     import asyncio
 
@@ -186,6 +186,10 @@ def _run_one_shot(config) -> None:
     from .backend import fetch_all
 
     console = Console()
+    # Bar width is responsive: fill the panel minus fixed overhead.
+    # Panel border (2) + inner padding (4) + bar prefix (2) + brackets (2)
+    # + suffix " XXX% used" (10) = 20 chars overhead.
+    bar_width = max(10, console.width - 20)
 
     results = asyncio.run(fetch_all(
         provider_ids=config.provider_ids,
@@ -214,7 +218,7 @@ def _run_one_shot(config) -> None:
 
         if p.primary:
             pct = p.primary.used_percent
-            bar = _rich_bar(pct)
+            bar = _rich_bar(pct, width=bar_width)
             lines.append(f"  [bold]{p.primary_label}:[/bold]")
             lines.append(f"  {bar} {pct:3.0f}% used")
             reset = p.primary.reset_text()
@@ -223,7 +227,7 @@ def _run_one_shot(config) -> None:
 
         if p.secondary:
             pct = p.secondary.used_percent
-            bar = _rich_bar(pct)
+            bar = _rich_bar(pct, width=bar_width)
             lines.append(f"  [bold]{p.secondary_label}:[/bold]")
             lines.append(f"  {bar} {pct:3.0f}% used")
             reset = p.secondary.reset_text()
@@ -232,7 +236,7 @@ def _run_one_shot(config) -> None:
 
         if p.tertiary:
             pct = p.tertiary.used_percent
-            bar = _rich_bar(pct)
+            bar = _rich_bar(pct, width=bar_width)
             lines.append(f"  [bold]{p.tertiary_label}:[/bold]")
             lines.append(f"  {bar} {pct:3.0f}% used")
             reset = p.tertiary.reset_text()
@@ -249,7 +253,7 @@ def _run_one_shot(config) -> None:
                 cost_pct = min(100.0, (cost.used / cost.limit) * 100.0)
             else:
                 cost_pct = 0.0
-            bar = _rich_bar(cost_pct)
+            bar = _rich_bar(cost_pct, width=bar_width)
             lines.append(
                 f"  [bold]Extra ({cost.period}) ${cost.used:,.2f} / ${cost.limit:,.2f}:[/bold]"
             )

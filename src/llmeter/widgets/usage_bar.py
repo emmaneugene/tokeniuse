@@ -16,25 +16,33 @@ class UsageBar(Widget):
     }
     """
 
+    MIN_BAR_WIDTH = 10
+
     def __init__(
         self,
         used_percent: float,
         label: str = "",
-        bar_width: int = 24,
         suffix: str = "used",
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._used = max(0.0, min(100.0, used_percent))
         self._label = label
-        self._bar_width = bar_width
         self._suffix = suffix
 
     def render(self) -> Text:
         pct = self._used
-        filled = round((pct / 100.0) * self._bar_width)
-        filled = max(0, min(self._bar_width, filled))
-        empty = self._bar_width - filled
+
+        # Compute bar width from available widget width.
+        # Fixed overhead: prefix + "[" + "]" + " XXX% {suffix}"
+        prefix_len = len(f"  {self._label}: ") if self._label else 2
+        suffix_len = len(f" {pct:3.0f}% {self._suffix}")
+        overhead = prefix_len + 1 + 1 + suffix_len  # [ and ]
+        bar_width = max(self.MIN_BAR_WIDTH, self.size.width - overhead)
+
+        filled = round((pct / 100.0) * bar_width)
+        filled = max(0, min(bar_width, filled))
+        empty = bar_width - filled
 
         # Low usage = green, high usage = red
         if pct >= 90:

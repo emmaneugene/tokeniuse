@@ -139,10 +139,10 @@ If no config file exists, only `codex` and `claude` are shown by default.
 llmeter
 ```
 
-### One-shot mode
+### Snapshot mode
 
 ```bash
-llmeter --one-shot
+llmeter --snapshot
 ```
 
 ### Authentication
@@ -169,7 +169,7 @@ llmeter --logout-gemini
 llmeter [options]
 
   --refresh SECONDS  Auto-refresh interval (overrides config)
-  --one-shot         Print once and exit (Rich-formatted)
+  --snapshot         Print once and exit (Rich-formatted)
   --init-config      Create a default config file and exit
   --login-codex      Authenticate with Codex via OAuth (one-time setup)
   --logout-codex     Remove stored Codex OAuth credentials
