@@ -120,8 +120,10 @@ def load_config() -> AppConfig:
     try:
         data = json.loads(path.read_text())
         cfg = AppConfig.from_dict(data)
+
         # Filter out unknown provider IDs
-        from .backend import PROVIDER_FETCHERS
+        from .backend import PROVIDER_FETCHERS, ALL_PROVIDER_ORDER
+        from .models import PROVIDERS as PROVIDER_META
         valid = [p for p in cfg.providers if p.id in PROVIDER_FETCHERS]
         unknown = [p.id for p in cfg.providers if p.id not in PROVIDER_FETCHERS]
         if unknown:
@@ -130,6 +132,17 @@ def load_config() -> AppConfig:
                 f"llmeter: ignoring unknown providers in config: {', '.join(unknown)}",
                 file=sys.stderr,
             )
+
+        # Auto-discover new providers not yet in config (append as disabled)
+        existing_ids = {p.id for p in valid}
+        for pid in ALL_PROVIDER_ORDER:
+            if pid not in existing_ids and pid in PROVIDER_FETCHERS:
+                meta = PROVIDER_META.get(pid)
+                valid.append(ProviderConfig(
+                    id=pid,
+                    enabled=meta.default_enabled if meta else False,
+                ))
+
         cfg.providers = valid
         if not any(p.enabled for p in cfg.providers):
             # Nothing enabled — fall back to defaults

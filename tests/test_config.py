@@ -156,6 +156,57 @@ class TestLoadConfig:
         assert cfg.provider_ids == ["gemini", "claude"]
         assert cfg.refresh_interval == 120
 
+    def test_load_auto_discovers_new_providers(self, tmp_config_dir: Path) -> None:
+        """Providers added after config was created should appear as disabled."""
+        data = {
+            "providers": [
+                {"id": "codex", "enabled": True},
+                {"id": "claude", "enabled": True},
+            ],
+        }
+        path = config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data))
+
+        cfg = load_config()
+
+        # Original two are enabled
+        assert cfg.provider_ids == ["codex", "claude"]
+
+        # All known providers should be present (originals + auto-discovered)
+        all_ids = cfg.all_provider_ids
+        assert "codex" in all_ids
+        assert "claude" in all_ids
+        assert "cursor" in all_ids
+        assert "gemini" in all_ids
+        assert "openai-api" in all_ids
+        assert "anthropic-api" in all_ids
+
+        # Auto-discovered ones are disabled
+        by_id = {p.id: p for p in cfg.providers}
+        assert by_id["cursor"].enabled is False
+        assert by_id["gemini"].enabled is False
+
+    def test_load_preserves_existing_order(self, tmp_config_dir: Path) -> None:
+        """Auto-discovered providers should appear after existing ones."""
+        data = {
+            "providers": [
+                {"id": "gemini", "enabled": True},
+                {"id": "codex", "enabled": True},
+            ],
+        }
+        path = config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data))
+
+        cfg = load_config()
+
+        # Existing order is preserved, new ones appended
+        all_ids = cfg.all_provider_ids
+        assert all_ids.index("gemini") < all_ids.index("codex")
+        # Auto-discovered come after existing
+        assert all_ids.index("codex") < all_ids.index("cursor")
+
     def test_load_falls_back_when_nothing_enabled(self, tmp_config_dir: Path) -> None:
         data = {
             "providers": [
