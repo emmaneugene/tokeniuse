@@ -169,10 +169,10 @@ def _parse_usage_response(
     if is_request_plan:
         # Request-based plan: show requests used / limit
         plan_pct = (requests_used / requests_limit) * 100 if requests_limit > 0 else 0
+        result.primary_label = f"Plan {requests_used} / {requests_limit} reqs"
         result.primary = RateWindow(
             used_percent=plan_pct,
             resets_at=billing_end,
-            reset_description=f"{requests_used} / {requests_limit} requests",
         )
     else:
         # Dollar-based plan: show dollar usage percentage

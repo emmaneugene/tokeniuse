@@ -177,7 +177,7 @@ class TestCursorUsageEndpoint:
         # 138/500 = 27.6%, NOT the dollar-based 81%
         assert result.primary is not None
         assert result.primary.used_percent == pytest.approx(27.6)
-        assert "138 / 500" in result.primary.reset_description
+        assert result.primary_label == "Plan 138 / 500 reqs"
 
     async def test_fetch_without_credentials(self, tmp_config_dir: Path) -> None:
         result = await fetch_cursor(timeout=5.0)
@@ -346,7 +346,7 @@ class TestCursorUsageParsing:
         # 138/500 requests = 27.6%
         assert result.primary is not None
         assert result.primary.used_percent == pytest.approx(27.6)
-        assert "138 / 500" in result.primary.reset_description
+        assert result.primary_label == "Plan 138 / 500 reqs"
         assert result.identity.login_method == "Cursor Enterprise"
         assert result.identity.account_email == "user@company.com"
 
@@ -364,7 +364,7 @@ class TestCursorUsageParsing:
         )
 
         assert result.primary.used_percent == 100.0
-        assert "500 / 500" in result.primary.reset_description
+        assert result.primary_label == "Plan 500 / 500 reqs"
 
     def test_parse_request_plan_prefers_total(self) -> None:
         """Should prefer numRequestsTotal over numRequests."""
@@ -379,7 +379,7 @@ class TestCursorUsageParsing:
         _parse_usage_response({}, None, request_data, result)
 
         assert result.primary.used_percent == pytest.approx(48.0)
-        assert "240 / 500" in result.primary.reset_description
+        assert result.primary_label == "Plan 240 / 500 reqs"
 
     def test_parse_request_usage_no_max_is_not_request_plan(self) -> None:
         """Without maxRequestUsage, should fall back to dollar-based."""
@@ -411,7 +411,7 @@ class TestCursorUsageParsing:
 
         # Dollar-based: 40500/50000 = 81%
         assert result.primary.used_percent == 81.0
-        assert result.primary.reset_description is None
+        assert result.primary_label == "Plan"  # default, no request counts
 
     # ── Misc ────────────────────────────────────────
 
