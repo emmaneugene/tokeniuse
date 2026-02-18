@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime
 
 from textual import work
@@ -99,7 +98,6 @@ class LLMeterApp(App):
         self._config = config
         self._providers: dict[str, ProviderResult] = {}
         self._cards: dict[str, ProviderCard] = {}
-        self._provider_locks: dict[str, asyncio.Lock] = {}
         self._pending_provider_ids: set[str] = set()
         self._refresh_in_progress = False
         self._refresh_queued = False
@@ -170,7 +168,7 @@ class LLMeterApp(App):
 
     @work(thread=False, group="providers")
     async def _fetch_provider(self, provider_id: str, settings: dict) -> None:
-        """Fetch a single provider and update its card."""
+        """Fetch a single provider and update its card in-place."""
         try:
             result = await fetch_one(
                 provider_id,
@@ -178,36 +176,9 @@ class LLMeterApp(App):
             )
             self._providers[provider_id] = result
 
-            lock = self._provider_locks.setdefault(provider_id, asyncio.Lock())
-            async with lock:
-                # Replace the card with a fresh one
-                old_card = self._cards.get(provider_id)
-                if old_card:
-                    container = self.query_one("#provider-list", Vertical)
-                    # Find position of old card
-                    children = list(container.children)
-                    try:
-                        idx = children.index(old_card)
-                    except ValueError:
-                        idx = -1
-
-                    new_card = ProviderCard(result, id=f"card-{provider_id}")
-
-                    if idx >= 0:
-                        await old_card.remove()
-                        if idx < len(list(container.children)):
-                            await container.mount(new_card, before=list(container.children)[idx])
-                        else:
-                            await container.mount(new_card)
-                    else:
-                        # Old card may have been replaced by a newer refresh; clean up by ID.
-                        card_id = f"card-{provider_id}"
-                        for child in list(container.children):
-                            if child.id == card_id:
-                                await child.remove()
-                        await container.mount(new_card)
-
-                    self._cards[provider_id] = new_card
+            card = self._cards.get(provider_id)
+            if card:
+                await card.update_data(result)
         finally:
             self._pending_provider_ids.discard(provider_id)
             self._update_status()
