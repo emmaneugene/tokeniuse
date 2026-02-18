@@ -9,8 +9,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-import aiohttp
-
 from ..models import (
     CostInfo,
     PROVIDERS,
@@ -19,11 +17,19 @@ from ..models import (
     RateWindow,
 )
 from . import claude_oauth
-from .helpers import parse_iso8601, http_debug_log
+from .helpers import parse_iso8601, http_get
 
 OAUTH_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 OAUTH_PROFILE_URL = "https://api.anthropic.com/api/oauth/profile"
 BETA_HEADER = "oauth-2025-04-20"
+
+_CLAUDE_HEADERS = lambda token: {  # noqa: E731
+    "Authorization": f"Bearer {token}",
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "anthropic-beta": BETA_HEADER,
+    "User-Agent": "LLMeter/0.1.0",
+}
 
 
 async def fetch_claude(timeout: float = 30.0, settings: dict | None = None) -> ProviderResult:
@@ -40,7 +46,20 @@ async def fetch_claude(timeout: float = 30.0, settings: dict | None = None) -> P
 
     # --- Fetch usage ---
     try:
-        usage = await _fetch_oauth_usage(access_token, timeout=timeout)
+        usage = await http_get(
+            "claude", OAUTH_USAGE_URL, _CLAUDE_HEADERS(access_token), timeout,
+            label="usage",
+            errors={
+                401: (
+                    "Unauthorized — token may be invalid or expired. "
+                    "Run `llmeter --login claude` to re-authenticate."
+                ),
+                403: (
+                    "Forbidden — token may be missing required scopes. "
+                    "Re-authenticate with `llmeter --login claude`."
+                ),
+            },
+        )
     except Exception as e:
         result.error = f"Claude API error: {e}"
         return result
@@ -103,121 +122,42 @@ async def fetch_claude(timeout: float = 30.0, settings: dict | None = None) -> P
 
 # ── API calls ──────────────────────────────────────────────
 
-async def _fetch_oauth_usage(access_token: str, timeout: float = 30.0) -> dict:
-    """Call the Claude OAuth usage endpoint."""
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "anthropic-beta": BETA_HEADER,
-        "User-Agent": "LLMeter/0.1.0",
-    }
-
-    http_debug_log(
-        "claude",
-        "usage_request",
-        method="GET",
-        url=OAUTH_USAGE_URL,
-        headers=headers,
-    )
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            OAUTH_USAGE_URL,
-            headers=headers,
-            timeout=aiohttp.ClientTimeout(total=timeout),
-        ) as resp:
-            http_debug_log(
-                "claude",
-                "usage_response",
-                method="GET",
-                url=OAUTH_USAGE_URL,
-                status=resp.status,
-            )
-
-            if resp.status == 401:
-                raise RuntimeError(
-                    "Unauthorized — token may be invalid or expired. "
-                    "Run `llmeter --login claude` to re-authenticate."
-                )
-            if resp.status == 403:
-                body = await resp.text()
-                if "user:profile" in body:
-                    raise RuntimeError(
-                        "Token missing 'user:profile' scope. "
-                        "Re-authenticate with `llmeter --login claude`."
-                    )
-                raise RuntimeError(f"Forbidden (HTTP 403): {body[:200]}")
-            if resp.status != 200:
-                body = await resp.text()
-                raise RuntimeError(f"HTTP {resp.status}: {body[:200]}")
-            return await resp.json()
-
-
 async def _fetch_account_info(
     access_token: str,
     timeout: float = 30.0,
 ) -> Optional[dict]:
     """Fetch account email and plan from the OAuth profile endpoint."""
     try:
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "anthropic-beta": BETA_HEADER,
-            "User-Agent": "LLMeter/0.1.0",
-        }
-
-        http_debug_log(
-            "claude",
-            "profile_request",
-            method="GET",
-            url=OAUTH_PROFILE_URL,
-            headers=headers,
+        data = await http_get(
+            "claude", OAUTH_PROFILE_URL, _CLAUDE_HEADERS(access_token), min(timeout, 10),
+            label="profile",
         )
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                OAUTH_PROFILE_URL,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=min(timeout, 10)),
-            ) as resp:
-                http_debug_log(
-                    "claude",
-                    "profile_response",
-                    method="GET",
-                    url=OAUTH_PROFILE_URL,
-                    status=resp.status,
-                )
-                if resp.status != 200:
-                    return None
-                data = await resp.json()
-
-        result: dict = {}
-
-        account = data.get("account")
-        if isinstance(account, dict):
-            email = (account.get("email") or "").strip()
-            if email:
-                result["email"] = email
-            if account.get("has_claude_max"):
-                result["plan"] = "Claude Max"
-            elif account.get("has_claude_pro"):
-                result["plan"] = "Claude Pro"
-
-        org = data.get("organization")
-        if isinstance(org, dict) and not result.get("plan"):
-            plan = _infer_plan_from_org(
-                (org.get("organization_type") or "").strip(),
-                (org.get("billing_type") or "").strip(),
-                (org.get("rate_limit_tier") or "").strip(),
-            )
-            if plan:
-                result["plan"] = plan
-
-        return result if result else None
     except Exception:
         return None
+
+    result: dict = {}
+
+    account = data.get("account")
+    if isinstance(account, dict):
+        email = (account.get("email") or "").strip()
+        if email:
+            result["email"] = email
+        if account.get("has_claude_max"):
+            result["plan"] = "Claude Max"
+        elif account.get("has_claude_pro"):
+            result["plan"] = "Claude Pro"
+
+    org = data.get("organization")
+    if isinstance(org, dict) and not result.get("plan"):
+        plan = _infer_plan_from_org(
+            (org.get("organization_type") or "").strip(),
+            (org.get("billing_type") or "").strip(),
+            (org.get("rate_limit_tier") or "").strip(),
+        )
+        if plan:
+            result["plan"] = plan
+
+    return result if result else None
 
 
 def _infer_plan_from_org(org_type: str, billing: str = "", tier: str = "") -> Optional[str]:

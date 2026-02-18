@@ -12,8 +12,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-import aiohttp
-
 from ..models import (
     PROVIDERS,
     ProviderIdentity,
@@ -21,7 +19,7 @@ from ..models import (
     RateWindow,
 )
 from . import copilot_oauth
-from .helpers import http_debug_log, parse_iso8601
+from .helpers import http_get, parse_iso8601
 
 COPILOT_USER_URL = "https://api.github.com/copilot_internal/user"
 
@@ -94,44 +92,18 @@ async def _fetch_copilot_user(access_token: str, timeout: float = 30.0) -> dict:
         "User-Agent": "GitHubCopilotChat/0.26.7",
         "X-Github-Api-Version": "2025-04-01",
     }
-
-    http_debug_log(
-        "copilot",
-        "usage_request",
-        method="GET",
-        url=COPILOT_USER_URL,
-        headers=headers,
+    return await http_get(
+        "copilot", COPILOT_USER_URL, headers, timeout,
+        label="usage",
+        errors={
+            401: (
+                "Unauthorized — token may be invalid or revoked. "
+                "Run `llmeter --login copilot` to re-authenticate."
+            ),
+            403: (
+                "Forbidden — you may not have an active Copilot subscription. "
+                "Check your GitHub Copilot plan."
+            ),
+            404: "Copilot endpoint not found — you may not have Copilot enabled.",
+        },
     )
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            COPILOT_USER_URL,
-            headers=headers,
-            timeout=aiohttp.ClientTimeout(total=timeout),
-        ) as resp:
-            http_debug_log(
-                "copilot",
-                "usage_response",
-                method="GET",
-                url=COPILOT_USER_URL,
-                status=resp.status,
-            )
-
-            if resp.status == 401:
-                raise RuntimeError(
-                    "Unauthorized — token may be invalid or revoked. "
-                    "Run `llmeter --login copilot` to re-authenticate."
-                )
-            if resp.status == 403:
-                raise RuntimeError(
-                    "Forbidden — you may not have an active Copilot subscription. "
-                    "Check your GitHub Copilot plan."
-                )
-            if resp.status == 404:
-                raise RuntimeError(
-                    "Copilot endpoint not found — you may not have Copilot enabled."
-                )
-            if resp.status != 200:
-                body = await resp.text()
-                raise RuntimeError(f"HTTP {resp.status}: {body[:200]}")
-            return await resp.json()

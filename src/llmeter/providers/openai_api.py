@@ -20,10 +20,9 @@ from ..models import (
     ProviderResult,
     RateWindow,
 )
-from .helpers import http_debug_log
+from .helpers import http_get
 
 COSTS_URL = "https://api.openai.com/v1/organization/costs"
-
 
 async def fetch_openai_api(
     timeout: float = 30.0,
@@ -105,7 +104,6 @@ async def _fetch_costs(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-
     params = {
         "start_time": str(start_ts),
         "end_time": str(end_ts),
@@ -117,45 +115,19 @@ async def _fetch_costs(
 
     async with aiohttp.ClientSession() as session:
         while True:
-            http_debug_log(
-                "openai-api",
-                "costs_request",
-                method="GET",
-                url=COSTS_URL,
-                headers=headers,
-                payload=params,
-            )
-            async with session.get(
-                COSTS_URL,
-                params=params,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as resp:
-                http_debug_log(
-                    "openai-api",
-                    "costs_response",
-                    method="GET",
-                    url=COSTS_URL,
-                    status=resp.status,
-                )
-                if resp.status == 401:
-                    raise RuntimeError(
+            data = await http_get(
+                "openai-api", COSTS_URL, headers, timeout,
+                label="costs", params=params, session=session,
+                errors={
+                    401: (
                         "Unauthorized — check your API key. "
                         "Admin keys (sk-admin-...) are required for the costs endpoint."
-                    )
-                if resp.status == 403:
-                    raise RuntimeError(
-                        "Forbidden — your API key may lack billing/costs permissions."
-                    )
-                if resp.status == 429:
-                    raise RuntimeError("Rate limited — try again in a moment.")
-                if resp.status != 200:
-                    text = await resp.text()
-                    raise RuntimeError(f"HTTP {resp.status}: {text[:300]}")
+                    ),
+                    403: "Forbidden — your API key may lack billing/costs permissions.",
+                    429: "Rate limited — try again in a moment.",
+                },
+            )
 
-                data = await resp.json()
-
-            # Sum up costs from all buckets
             for bucket in data.get("data", []):
                 for result_item in bucket.get("results", []):
                     amount = result_item.get("amount", {})

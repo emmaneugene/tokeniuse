@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
+import aiohttp
+
 
 def config_dir(*parts: str) -> Path:
     """Return a path under the llmeter XDG config directory.
@@ -123,3 +125,106 @@ def http_debug_log(
     except OSError:
         # Debug logging must never break normal provider behavior.
         pass
+
+
+# ── HTTP helpers ──────────────────────────────────────────
+
+_BODY_PREVIEW = 200  # chars to include in default error messages
+
+
+async def http_get(
+    provider: str,
+    url: str,
+    headers: dict,
+    timeout: float,
+    *,
+    label: str = "request",
+    errors: dict[int, str] | None = None,
+    params: dict | None = None,
+    session: aiohttp.ClientSession | None = None,
+) -> dict:
+    """GET a JSON endpoint with debug logging and standard error handling.
+
+    Raises RuntimeError on non-2xx responses.  If *session* is provided it
+    is used as-is and not closed; otherwise a fresh session is created and
+    closed after the request.  *errors* maps HTTP status codes to custom
+    error messages; unmatched non-200 statuses fall back to
+    ``"HTTP {status}: {body[:200]}"``.
+    """
+    errors = errors or {}
+    close_session = session is None
+    if close_session:
+        session = aiohttp.ClientSession()
+
+    try:
+        http_debug_log(
+            provider, f"{label}_request",
+            method="GET", url=url, headers=headers, payload=params,
+        )
+        async with session.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=timeout),
+        ) as resp:
+            http_debug_log(
+                provider, f"{label}_response",
+                method="GET", url=url, status=resp.status,
+            )
+            if resp.status in errors:
+                raise RuntimeError(errors[resp.status])
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"HTTP {resp.status}: {body[:_BODY_PREVIEW]}")
+            return await resp.json()
+    finally:
+        if close_session:
+            await session.close()
+
+
+async def http_post(
+    provider: str,
+    url: str,
+    headers: dict,
+    payload: dict,
+    timeout: float,
+    *,
+    label: str = "request",
+    errors: dict[int, str] | None = None,
+    session: aiohttp.ClientSession | None = None,
+) -> dict:
+    """POST a JSON payload and return the JSON response.
+
+    Raises RuntimeError on non-2xx responses.  If *session* is provided it
+    is used as-is and not closed; otherwise a fresh session is created and
+    closed after the request.
+    """
+    errors = errors or {}
+    close_session = session is None
+    if close_session:
+        session = aiohttp.ClientSession()
+
+    try:
+        http_debug_log(
+            provider, f"{label}_request",
+            method="POST", url=url, headers=headers, payload=payload,
+        )
+        async with session.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=aiohttp.ClientTimeout(total=timeout),
+        ) as resp:
+            http_debug_log(
+                provider, f"{label}_response",
+                method="POST", url=url, status=resp.status,
+            )
+            if resp.status in errors:
+                raise RuntimeError(errors[resp.status])
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"HTTP {resp.status}: {body[:_BODY_PREVIEW]}")
+            return await resp.json()
+    finally:
+        if close_session:
+            await session.close()

@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import aiohttp
-
 from ..models import (
     CreditsInfo,
     PROVIDERS,
@@ -18,7 +16,7 @@ from ..models import (
     RateWindow,
 )
 from . import codex_oauth
-from .helpers import http_debug_log
+from .helpers import http_get
 
 # The correct endpoint, per CodexBar and codex-rs source:
 # https://chatgpt.com/backend-api/wham/usage
@@ -48,37 +46,16 @@ async def fetch_codex(timeout: float = 20.0, settings: dict | None = None) -> Pr
     }
 
     try:
-        http_debug_log(
-            "codex",
-            "usage_request",
-            method="GET",
-            url=USAGE_URL,
-            headers=headers,
+        data = await http_get(
+            "codex", USAGE_URL, headers, timeout,
+            label="usage",
+            errors={
+                401: (
+                    "Unauthorized — token may be invalid or expired. "
+                    "Run `llmeter --login codex` to re-authenticate."
+                ),
+            },
         )
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                USAGE_URL,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as resp:
-                http_debug_log(
-                    "codex",
-                    "usage_response",
-                    method="GET",
-                    url=USAGE_URL,
-                    status=resp.status,
-                )
-                if resp.status == 401:
-                    raise RuntimeError(
-                        "Unauthorized — token may be invalid or expired. "
-                        "Run `llmeter --login codex` to re-authenticate."
-                    )
-                if resp.status != 200:
-                    body = await resp.text()
-                    raise RuntimeError(f"HTTP {resp.status}: {body[:200]}")
-                data = await resp.json()
-    except RuntimeError:
-        raise
     except Exception as e:
         result.error = f"Codex API error: {e}"
         return result

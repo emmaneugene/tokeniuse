@@ -24,12 +24,11 @@ from ..models import (
     ProviderResult,
     RateWindow,
 )
-from .helpers import http_debug_log
+from .helpers import http_get
 
 BASE_URL = "https://api.anthropic.com"
 COST_REPORT_URL = f"{BASE_URL}/v1/organizations/cost_report"
 API_VERSION = "2023-06-01"
-
 
 async def fetch_anthropic_api(
     timeout: float = 30.0,
@@ -126,44 +125,21 @@ async def _fetch_cost_report(
             if page_token:
                 params["page"] = page_token
 
-            http_debug_log(
-                "anthropic-api",
-                "cost_report_request",
-                method="GET",
-                url=COST_REPORT_URL,
-                headers=headers,
-                payload=params,
-            )
-            async with session.get(
-                COST_REPORT_URL,
-                params=params,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as resp:
-                http_debug_log(
-                    "anthropic-api",
-                    "cost_report_response",
-                    method="GET",
-                    url=COST_REPORT_URL,
-                    status=resp.status,
-                )
-                if resp.status == 401:
-                    raise RuntimeError(
+            data = await http_get(
+                "anthropic-api", COST_REPORT_URL, headers, timeout,
+                label="cost_report", params=params, session=session,
+                errors={
+                    401: (
                         "Unauthorized — check your API key. "
                         "Admin keys (sk-ant-admin01-...) required for cost reports."
-                    )
-                if resp.status == 403:
-                    raise RuntimeError(
+                    ),
+                    403: (
                         "Forbidden — your key lacks admin permissions. "
                         "Get an admin key from console.anthropic.com."
-                    )
-                if resp.status != 200:
-                    text = await resp.text()
-                    raise RuntimeError(f"HTTP {resp.status}: {text[:300]}")
+                    ),
+                },
+            )
 
-                data = await resp.json()
-
-            # Sum costs from all buckets
             # amount is in lowest currency units (cents) as a decimal string
             for bucket in data.get("data", []):
                 for item in bucket.get("results", []):

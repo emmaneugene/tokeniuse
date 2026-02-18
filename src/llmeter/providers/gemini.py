@@ -9,8 +9,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-import aiohttp
-
 from ..models import (
     PROVIDERS,
     ProviderIdentity,
@@ -18,7 +16,7 @@ from ..models import (
     RateWindow,
 )
 from . import gemini_oauth
-from .helpers import parse_iso8601, http_debug_log
+from .helpers import parse_iso8601, http_post
 
 QUOTA_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
 LOAD_CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist"
@@ -107,47 +105,26 @@ async def _load_code_assist(
             "Content-Type": "application/json",
         }
         payload = {"metadata": {"ideType": "GEMINI_CLI", "pluginType": "GEMINI"}}
-        http_debug_log(
-            "gemini",
-            "load_code_assist_request",
-            method="POST",
-            url=LOAD_CODE_ASSIST_ENDPOINT,
-            headers=headers,
-            payload=payload,
+        data = await http_post(
+            "gemini", LOAD_CODE_ASSIST_ENDPOINT, headers, payload, timeout,
+            label="load_code_assist",
         )
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                LOAD_CODE_ASSIST_ENDPOINT,
-                json=payload,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as resp:
-                http_debug_log(
-                    "gemini",
-                    "load_code_assist_response",
-                    method="POST",
-                    url=LOAD_CODE_ASSIST_ENDPOINT,
-                    status=resp.status,
-                )
-                if resp.status != 200:
-                    return (None, None)
-                data = await resp.json()
-
-        tier_id = None
-        current_tier = data.get("currentTier")
-        if isinstance(current_tier, dict):
-            tier_id = current_tier.get("id")
-
-        project_id = None
-        proj = data.get("cloudaicompanionProject")
-        if isinstance(proj, str) and proj.strip():
-            project_id = proj.strip()
-        elif isinstance(proj, dict):
-            project_id = proj.get("id") or proj.get("projectId")
-
-        return (tier_id, project_id)
     except Exception:
         return (None, None)
+
+    tier_id = None
+    current_tier = data.get("currentTier")
+    if isinstance(current_tier, dict):
+        tier_id = current_tier.get("id")
+
+    project_id = None
+    proj = data.get("cloudaicompanionProject")
+    if isinstance(proj, str) and proj.strip():
+        project_id = proj.strip()
+    elif isinstance(proj, dict):
+        project_id = proj.get("id") or proj.get("projectId")
+
+    return (tier_id, project_id)
 
 
 async def _fetch_quota(
@@ -167,35 +144,13 @@ async def _fetch_quota(
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
-    http_debug_log(
-        "gemini",
-        "quota_request",
-        method="POST",
-        url=QUOTA_ENDPOINT,
-        headers=headers,
-        payload=body,
+    data = await http_post(
+        "gemini", QUOTA_ENDPOINT, headers, body, timeout,
+        label="quota",
+        errors={
+            401: "Unauthorized — run `llmeter --login gemini` to re-authenticate.",
+        },
     )
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            QUOTA_ENDPOINT,
-            json=body,
-            headers=headers,
-            timeout=aiohttp.ClientTimeout(total=timeout),
-        ) as resp:
-            http_debug_log(
-                "gemini",
-                "quota_response",
-                method="POST",
-                url=QUOTA_ENDPOINT,
-                status=resp.status,
-            )
-            if resp.status == 401:
-                raise RuntimeError("Unauthorized — run `llmeter --login gemini` to re-authenticate.")
-            if resp.status != 200:
-                text = await resp.text()
-                raise RuntimeError(f"HTTP {resp.status}: {text[:200]}")
-            data = await resp.json()
 
     buckets = data.get("buckets", [])
     if not buckets:

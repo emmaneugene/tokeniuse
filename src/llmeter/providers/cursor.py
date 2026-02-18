@@ -24,13 +24,12 @@ from ..models import (
     RateWindow,
 )
 from . import cursor_auth
-from .helpers import http_debug_log
+from .helpers import http_get
 
 BASE_URL = "https://cursor.com"
 USAGE_SUMMARY_URL = f"{BASE_URL}/api/usage-summary"
 AUTH_ME_URL = f"{BASE_URL}/api/auth/me"
 USAGE_URL = f"{BASE_URL}/api/usage"
-
 
 async def fetch_cursor(timeout: float = 20.0, settings: dict | None = None) -> ProviderResult:
     """Fetch Cursor usage via cookie-authenticated APIs."""
@@ -54,15 +53,23 @@ async def fetch_cursor(timeout: float = 20.0, settings: dict | None = None) -> P
     try:
         async with aiohttp.ClientSession() as session:
             # Fetch usage summary (dollar-based)
-            usage_data = await _fetch_json(
-                session, USAGE_SUMMARY_URL, headers, timeout
+            usage_data = await http_get(
+                "cursor", USAGE_SUMMARY_URL, headers, timeout,
+                label="usage_summary", session=session,
+                errors={
+                    # "session expired" is a sentinel the exception handler
+                    # checks to know when to clear stored credentials.
+                    401: "Cursor session expired. Run `llmeter --login cursor` to re-authenticate.",
+                    403: "Cursor session expired. Run `llmeter --login cursor` to re-authenticate.",
+                },
             )
 
             # Fetch user info (best-effort — needed for sub ID and email)
             user_data = None
             try:
-                user_data = await _fetch_json(
-                    session, AUTH_ME_URL, headers, timeout
+                user_data = await http_get(
+                    "cursor", AUTH_ME_URL, headers, timeout,
+                    label="auth_me", session=session,
                 )
             except Exception:
                 pass
@@ -72,22 +79,19 @@ async def fetch_cursor(timeout: float = 20.0, settings: dict | None = None) -> P
             if user_data and user_data.get("sub"):
                 try:
                     url = f"{USAGE_URL}?user={user_data['sub']}"
-                    request_data = await _fetch_json(
-                        session, url, headers, timeout
+                    request_data = await http_get(
+                        "cursor", url, headers, timeout,
+                        label="usage", session=session,
                     )
                 except Exception:
                     pass
 
     except RuntimeError as e:
-        if "401" in str(e) or "403" in str(e):
+        msg = str(e)
+        if "session expired" in msg:
             # Cookie expired — clear it so user gets a clean prompt
             cursor_auth.clear_credentials()
-            result.error = (
-                "Cursor session expired. "
-                "Run `llmeter --login cursor` to re-authenticate."
-            )
-        else:
-            result.error = f"Cursor API error: {e}"
+        result.error = msg
         return result
     except Exception as e:
         result.error = f"Cursor API error: {e}"
@@ -102,40 +106,6 @@ async def fetch_cursor(timeout: float = 20.0, settings: dict | None = None) -> P
     result.source = "cookie"
     result.updated_at = datetime.now(timezone.utc)
     return result
-
-
-async def _fetch_json(
-    session: aiohttp.ClientSession,
-    url: str,
-    headers: dict,
-    timeout: float,
-) -> dict:
-    """Fetch a JSON endpoint, raising RuntimeError on failure."""
-    http_debug_log(
-        "cursor",
-        "request",
-        method="GET",
-        url=url,
-        headers=headers,
-    )
-    async with session.get(
-        url,
-        headers=headers,
-        timeout=aiohttp.ClientTimeout(total=timeout),
-    ) as resp:
-        http_debug_log(
-            "cursor",
-            "response",
-            method="GET",
-            url=url,
-            status=resp.status,
-        )
-        if resp.status in (401, 403):
-            raise RuntimeError(f"HTTP {resp.status}: session expired")
-        if resp.status != 200:
-            body = await resp.text()
-            raise RuntimeError(f"HTTP {resp.status}: {body[:200]}")
-        return await resp.json()
 
 
 # ── Response parsing ───────────────────────────────────────
