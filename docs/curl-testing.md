@@ -17,7 +17,8 @@ Quick-reference curl commands for manually testing each provider's API endpoints
 5. [GitHub Copilot (Device Flow)](#5-github-copilot-device-flow)
 6. [OpenAI API (Admin Key)](#6-openai-api-admin-key)
 7. [Anthropic API (Admin Key)](#7-anthropic-api-admin-key)
-8. [Extracting Tokens from auth.json](#8-extracting-tokens-from-authjson)
+8. [Opencode Zen (Auth Cookie)](#8-opencode-zen-auth-cookie)
+9. [Extracting Tokens from auth.json](#9-extracting-tokens-from-authjson)
 
 ---
 
@@ -473,7 +474,88 @@ curl -s -G \
 
 ---
 
-## 8. Extracting Tokens from auth.json
+## 8. Opencode Zen (Auth Cookie)
+
+**Auth:** The `auth` session cookie from opencode.ai. It's HttpOnly — extract
+it from DevTools → Application → Cookies → opencode.ai → `auth`, or from a
+running CDP session. Set via `api_key` in settings or `OPENCODE_AUTH_COOKIE`
+env var.
+
+```bash
+# Set your auth cookie value (the full Fe26.2** string, not "auth=...")
+OPENCODE_COOKIE="Fe26.2**..."
+```
+
+### 8a. Fetch Workspace Page (balance, monthly spend, usage history)
+
+The page is server-rendered — all billing data is embedded as inline
+JavaScript. The response is HTML, not JSON, so use `grep` to extract values.
+
+```bash
+curl -s \
+  -H "Cookie: auth=$OPENCODE_COOKIE" \
+  -H "Accept: text/html" \
+  -H "User-Agent: llmeter/1.0" \
+  -L "https://opencode.ai/zen" \
+  | grep -oE '(balance|monthlyUsage|monthlyLimit):[0-9]+'
+```
+
+**Expected output:**
+
+```
+balance:1708723204
+monthlyUsage:379059776
+monthlyLimit:20
+```
+
+All cost integers are in units of 1e-8 USD — divide by `1e8` to get dollars.
+
+To also extract the account email:
+
+```bash
+curl -s \
+  -H "Cookie: auth=$OPENCODE_COOKIE" \
+  -H "Accept: text/html" \
+  -L "https://opencode.ai/zen" \
+  | grep -oE '"[^"@]+@[^"]+"' | head -1
+```
+
+**Expected response shape** (embedded in the page's `<script>` block):
+
+```js
+// billing block
+$R[40]($R[16], {
+  balance: 1708723204,        // wallet balance  (÷ 1e8 = $17.09)
+  monthlyUsage: 379059776,    // spend this month (÷ 1e8 = $3.79)
+  monthlyLimit: 20,           // monthly cap in whole USD ($20)
+  reload: true,
+  reloadAmount: 50,
+  ...
+});
+
+// per-request usage list
+$R[40]($R[24], [
+  {
+    id: "usg_...",
+    timeCreated: new Date("2026-02-24T06:15:54.000Z"),
+    model: "gemini-3.1-pro",
+    provider: "google",
+    inputTokens: 1133,
+    outputTokens: 28,
+    cost: 1161740,            // (÷ 1e8 = $0.0116)
+    enrichment: { plan: "byok" }
+  },
+  ...
+]);
+```
+
+> **Note:** `https://opencode.ai/zen` redirects to
+> `https://opencode.ai/workspace/<workspace_id>`. The `-L` flag follows
+> the redirect automatically.
+
+---
+
+## 9. Extracting Tokens from auth.json
 
 After running `llmeter --login <provider>`, credentials are stored in
 `~/.config/llmeter/auth.json`. Here's how to extract them:
@@ -514,9 +596,10 @@ GEMINI_PROJECT_ID=$(jq -r '.["google-gemini-cli"].projectId // empty' "$AUTH_FIL
 COPILOT_TOKEN=$(jq -r '.["github-copilot"].access' "$AUTH_FILE")
 ```
 
-### OpenAI API / Anthropic API
+### OpenAI API / Anthropic API / Opencode Zen
 
-These use API keys, not OAuth tokens. They come from env vars or `settings.json`:
+These use API keys (or cookies-as-keys), not OAuth tokens. They come from
+env vars or `settings.json`:
 
 ```bash
 SETTINGS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/llmeter/settings.json"
@@ -528,6 +611,10 @@ OPENAI_ADM_KEY=$(jq -r '.providers[] | select(.id=="openai-api") | .api_key // e
 # Anthropic
 ANTHROPIC_ADM_KEY=$(jq -r '.providers[] | select(.id=="anthropic-api") | .api_key // empty' "$SETTINGS_FILE")
 : "${ANTHROPIC_ADM_KEY:=$ANTHROPIC_ADMIN_KEY}"   # fall back to env var
+
+# Opencode Zen
+OPENCODE_COOKIE=$(jq -r '.providers[] | select(.id=="opencode") | .api_key // empty' "$SETTINGS_FILE")
+: "${OPENCODE_COOKIE:=$OPENCODE_AUTH_COOKIE}"   # fall back to env var
 ```
 
 ---
@@ -651,6 +738,23 @@ if [[ -n "$ANTHROPIC_ADM_KEY" ]]; then
     "https://api.anthropic.com/v1/organizations/cost_report" | jq .
 else
   echo "SKIP — no API key"
+fi
+
+echo ""
+echo "=== Opencode Zen ==="
+OPENCODE_COOKIE="${OPENCODE_AUTH_COOKIE:-}"
+if [[ -z "$OPENCODE_COOKIE" && -f "$SETTINGS_FILE" ]]; then
+  OPENCODE_COOKIE=$(jq -r '.providers[]? | select(.id=="opencode") | .api_key // empty' "$SETTINGS_FILE" 2>/dev/null)
+fi
+if [[ -n "$OPENCODE_COOKIE" ]]; then
+  curl -sw '\nHTTP %{http_code}\n' \
+    -H "Cookie: auth=$OPENCODE_COOKIE" \
+    -H "Accept: text/html" \
+    -H "User-Agent: llmeter/1.0" \
+    -L "https://opencode.ai/zen" \
+    | grep -oE '(balance|monthlyUsage|monthlyLimit):[0-9]+'
+else
+  echo "SKIP — no cookie"
 fi
 ```
 

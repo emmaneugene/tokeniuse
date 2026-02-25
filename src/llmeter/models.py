@@ -139,6 +139,7 @@ class ProviderResult:
 @dataclass(frozen=True)
 class ProviderMeta:
     """Display metadata for a provider (single source of truth)."""
+
     id: str
     name: str
     icon: str
@@ -165,34 +166,66 @@ class ProviderMeta:
 
 PROVIDERS: dict[str, ProviderMeta] = {
     "claude": ProviderMeta(
-        id="claude", name="Claude", icon="◈", color="#d4a27f",
-        primary_label="Session (5h)", secondary_label="Weekly",
+        id="claude",
+        name="Claude",
+        icon="◈",
+        color="#d4a27f",
+        primary_label="Session (5h)",
+        secondary_label="Weekly",
         tertiary_label="Sonnet",
         default_enabled=True,
     ),
     "codex": ProviderMeta(
-        id="codex", name="Codex", icon="⬡", color="#10a37f",
-        primary_label="Session (5h)", secondary_label="Weekly",
+        id="codex",
+        name="Codex",
+        icon="⬡",
+        color="#10a37f",
+        primary_label="Session (5h)",
+        secondary_label="Weekly",
         default_enabled=True,
     ),
     "cursor": ProviderMeta(
-        id="cursor", name="Cursor", icon="⦿", color="#00bfa5",
-        primary_label="Plan", secondary_label="On-Demand",
+        id="cursor",
+        name="Cursor",
+        icon="⦿",
+        color="#848484",
+        primary_label="Plan",
+        secondary_label="On-Demand",
     ),
     "gemini": ProviderMeta(
-        id="gemini", name="Gemini", icon="✦", color="#ab87ea",
-        primary_label="Pro (24h)", secondary_label="Flash (24h)",
-    ),
-    "openai-api": ProviderMeta(
-        id="openai-api", name="OpenAI API", icon="⬡", color="#10a37f",
-        primary_label="Spend",
-    ),
-    "anthropic-api": ProviderMeta(
-        id="anthropic-api", name="Anthropic API", icon="◈", color="#d4a27f",
-        primary_label="Spend",
+        id="gemini",
+        name="Gemini",
+        icon="✦",
+        color="#ab87ea",
+        primary_label="Pro (24h)",
+        secondary_label="Flash (24h)",
     ),
     "copilot": ProviderMeta(
-        id="copilot", name="Copilot", icon="⬠", color="#6e40c9",
+        id="copilot",
+        name="Copilot",
+        icon="⬠",
+        color="#6e40c9",
         primary_label="Premium (Monthly)",
+    ),
+    "anthropic-api": ProviderMeta(
+        id="anthropic-api",
+        name="Anthropic API",
+        icon="◈",
+        color="#d4a27f",
+        primary_label="Spend",
+    ),
+    "openai-api": ProviderMeta(
+        id="openai-api",
+        name="OpenAI API",
+        icon="⬡",
+        color="#10a37f",
+        primary_label="Spend",
+    ),
+    "opencode": ProviderMeta(
+        id="opencode",
+        name="Opencode Zen API",
+        icon="◆",
+        color="#F5EFEA",
+        primary_label="Monthly",
     ),
 }

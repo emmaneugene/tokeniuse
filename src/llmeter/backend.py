@@ -13,6 +13,7 @@ from .providers.subscription.gemini import fetch_gemini
 from .providers.subscription.copilot import fetch_copilot
 from .providers.api.openai_api import fetch_openai_api
 from .providers.api.anthropic_api import fetch_anthropic_api
+from .providers.api.opencode import fetch_opencode
 
 # Type for provider fetch functions.
 # All fetchers accept (timeout, settings) keyword args.
@@ -27,12 +28,13 @@ PROVIDER_FETCHERS: dict[str, FetchFunc] = {
     "openai-api": fetch_openai_api,
     "anthropic-api": fetch_anthropic_api,
     "copilot": fetch_copilot,
+    "opencode": fetch_opencode,
 }
 
 # Canonical order for all providers (used by init_config and default config).
 # The `default_enabled` flag on each ProviderMeta controls which are active
 # out of the box.
-ALL_PROVIDER_ORDER = ["codex", "claude", "cursor", "gemini", "copilot", "openai-api", "anthropic-api"]
+ALL_PROVIDER_ORDER = ["codex", "claude", "cursor", "gemini", "copilot", "openai-api", "anthropic-api", "opencode"]
 
 
 _FALLBACK_META = ProviderMeta(id="?", name="Unknown", icon="●", color="#888888")

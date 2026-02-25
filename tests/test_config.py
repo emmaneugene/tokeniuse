@@ -7,7 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from llmeter.config import AppConfig, ProviderConfig, enable_provider, init_config, load_config, config_path
+from llmeter.config import (
+    AppConfig,
+    ProviderConfig,
+    enable_provider,
+    init_config,
+    load_config,
+    config_path,
+)
 
 
 class TestProviderConfig:
@@ -27,10 +34,14 @@ class TestProviderConfig:
         assert pc.enabled is False
 
     def test_from_dict_preserves_settings(self) -> None:
-        pc = ProviderConfig.from_dict({
-            "id": "openai-api", "enabled": True,
-            "api_key": "sk-test", "monthly_budget": 50.0,
-        })
+        pc = ProviderConfig.from_dict(
+            {
+                "id": "openai-api",
+                "enabled": True,
+                "api_key": "sk-test",
+                "monthly_budget": 50.0,
+            }
+        )
         assert pc.settings == {"api_key": "sk-test", "monthly_budget": 50.0}
 
     def test_to_dict_roundtrip(self) -> None:
@@ -48,34 +59,47 @@ class TestAppConfig:
     """Test AppConfig enabled filtering."""
 
     def test_provider_ids_returns_only_enabled(self) -> None:
-        cfg = AppConfig(providers=[
-            ProviderConfig(id="codex", enabled=True),
-            ProviderConfig(id="gemini", enabled=False),
-            ProviderConfig(id="claude", enabled=True),
-        ])
+        cfg = AppConfig(
+            providers=[
+                ProviderConfig(id="codex", enabled=True),
+                ProviderConfig(id="gemini", enabled=False),
+                ProviderConfig(id="claude", enabled=True),
+            ]
+        )
         assert cfg.provider_ids == ["codex", "claude"]
 
     def test_all_provider_ids_returns_all(self) -> None:
-        cfg = AppConfig(providers=[
-            ProviderConfig(id="codex", enabled=True),
-            ProviderConfig(id="gemini", enabled=False),
-        ])
+        cfg = AppConfig(
+            providers=[
+                ProviderConfig(id="codex", enabled=True),
+                ProviderConfig(id="gemini", enabled=False),
+            ]
+        )
         assert cfg.all_provider_ids == ["codex", "gemini"]
 
     def test_enabled_providers_preserves_order(self) -> None:
-        cfg = AppConfig(providers=[
-            ProviderConfig(id="gemini", enabled=True),
-            ProviderConfig(id="codex", enabled=False),
-            ProviderConfig(id="claude", enabled=True),
-        ])
+        cfg = AppConfig(
+            providers=[
+                ProviderConfig(id="gemini", enabled=True),
+                ProviderConfig(id="codex", enabled=False),
+                ProviderConfig(id="claude", enabled=True),
+            ]
+        )
         ids = [p.id for p in cfg.enabled_providers]
         assert ids == ["gemini", "claude"]
 
     def test_default_has_all_providers(self) -> None:
         cfg = AppConfig.default()
-        assert len(cfg.providers) == 7
+        assert len(cfg.providers) == 8
         assert set(cfg.all_provider_ids) == {
-            "codex", "claude", "cursor", "gemini", "copilot", "openai-api", "anthropic-api",
+            "codex",
+            "claude",
+            "cursor",
+            "gemini",
+            "copilot",
+            "openai-api",
+            "anthropic-api",
+            "opencode",
         }
 
     def test_default_enables_codex_and_claude_only(self) -> None:
@@ -137,7 +161,7 @@ class TestLoadConfig:
     def test_load_returns_default_when_no_file(self, tmp_config_dir: Path) -> None:
         cfg = load_config()
         assert cfg.provider_ids == ["codex", "claude"]
-        assert len(cfg.providers) == 7
+        assert len(cfg.providers) == 8
 
     def test_load_respects_enabled_flag(self, tmp_config_dir: Path) -> None:
         data = {
@@ -243,7 +267,9 @@ class TestLoadConfig:
         by_id = {p["id"]: p for p in reloaded["providers"]}
         assert by_id["cursor"]["enabled"] is True
 
-    def test_enable_provider_creates_config_if_missing(self, tmp_config_dir: Path) -> None:
+    def test_enable_provider_creates_config_if_missing(
+        self, tmp_config_dir: Path
+    ) -> None:
         """enable_provider should create settings.json if it doesn't exist."""
         path = config_path()
         assert not path.exists()
@@ -255,7 +281,9 @@ class TestLoadConfig:
         by_id = {p["id"]: p for p in reloaded["providers"]}
         assert by_id["cursor"]["enabled"] is True
 
-    def test_enable_provider_noop_if_already_enabled(self, tmp_config_dir: Path) -> None:
+    def test_enable_provider_noop_if_already_enabled(
+        self, tmp_config_dir: Path
+    ) -> None:
         data = {
             "providers": [{"id": "codex", "enabled": True}],
             "refresh_interval": 120,
