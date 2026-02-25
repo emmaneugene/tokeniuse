@@ -322,8 +322,14 @@ async def _fetch_quota(
     model_map: dict[str, tuple[float, Optional[datetime]]] = {}
     for bucket in buckets:
         model_id = bucket.get("modelId")
-        fraction = bucket.get("remainingFraction")
-        if model_id is None or fraction is None:
+        if model_id is None:
+            continue
+        raw_fraction = bucket.get("remainingFraction")
+        if raw_fraction is None:
+            continue
+        try:
+            fraction = float(raw_fraction)
+        except (TypeError, ValueError):
             continue
         reset_time = parse_iso8601(bucket.get("resetTime"))
         if model_id in model_map:

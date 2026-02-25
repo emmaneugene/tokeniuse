@@ -280,7 +280,10 @@ def _format_plan_type(plan_type: str) -> str:
 
 
 def _parse_window(window: dict) -> RateWindow:
-    used_pct = window.get("used_percent", 0)
+    try:
+        used_pct = float(window.get("used_percent") or 0)
+    except (TypeError, ValueError):
+        used_pct = 0.0
     limit_secs = window.get("limit_window_seconds")
     window_mins = limit_secs // 60 if isinstance(limit_secs, (int, float)) else None
     resets_at = None

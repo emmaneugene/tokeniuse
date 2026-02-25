@@ -172,17 +172,23 @@ def _parse_usage_response(
 
     individual = data.get("individualUsage") or {}
     on_demand = individual.get("onDemand") or {}
-    od_used_cents = on_demand.get("used", 0) or 0
-    od_limit_cents = on_demand.get("limit")
+    try:
+        od_used_cents = float(on_demand.get("used") or 0)
+    except (TypeError, ValueError):
+        od_used_cents = 0.0
+    try:
+        od_limit_cents = float(on_demand.get("limit") or 0)
+    except (TypeError, ValueError):
+        od_limit_cents = 0.0
 
-    if od_limit_cents and od_limit_cents > 0:
+    if od_limit_cents > 0:
         od_pct = (od_used_cents / od_limit_cents) * 100
         result.secondary = RateWindow(used_percent=od_pct, resets_at=billing_end)
 
     if od_used_cents > 0:
         result.cost = CostInfo(
             used=od_used_cents / 100.0,
-            limit=(od_limit_cents or 0) / 100.0,
+            limit=od_limit_cents / 100.0,
             currency="USD",
             period="Monthly",
         )
@@ -200,21 +206,38 @@ def _parse_request_usage(request_data: dict | None) -> tuple[int, int | None]:
     if not request_data:
         return (0, None)
     gpt4 = request_data.get("gpt-4") or {}
-    limit = gpt4.get("maxRequestUsage")
-    if limit is None:
+    raw_limit = gpt4.get("maxRequestUsage")
+    if raw_limit is None:
         return (0, None)
-    used = gpt4.get("numRequestsTotal") or gpt4.get("numRequests") or 0
+    try:
+        limit = int(raw_limit)
+    except (TypeError, ValueError):
+        return (0, None)
+    try:
+        used = int(gpt4.get("numRequestsTotal") or gpt4.get("numRequests") or 0)
+    except (TypeError, ValueError):
+        used = 0
     return (used, limit)
 
 
 def _calc_plan_percent(plan: dict) -> float:
-    plan_used_cents = plan.get("used", 0) or 0
-    plan_limit_cents = plan.get("limit", 0) or 0
+    try:
+        plan_used_cents = float(plan.get("used") or 0)
+    except (TypeError, ValueError):
+        plan_used_cents = 0.0
+    try:
+        plan_limit_cents = float(plan.get("limit") or 0)
+    except (TypeError, ValueError):
+        plan_limit_cents = 0.0
     if plan_limit_cents > 0:
         return (plan_used_cents / plan_limit_cents) * 100
-    if plan.get("totalPercentUsed") is not None:
-        raw = plan["totalPercentUsed"]
-        return raw * 100 if raw <= 1 else raw
+    raw = plan.get("totalPercentUsed")
+    if raw is not None:
+        try:
+            raw = float(raw)
+            return raw * 100 if raw <= 1 else raw
+        except (TypeError, ValueError):
+            pass
     return 0.0
 
 

@@ -113,10 +113,21 @@ class CopilotProvider(SubscriptionProvider):
             reset_dt = parse_iso8601(reset_date_str)
 
         if premium and not premium.get("unlimited", False):
-            entitlement = int(premium.get("entitlement", 0))
-            remaining = int(premium.get("remaining", 0))
+            try:
+                entitlement = int(premium.get("entitlement") or 0)
+            except (TypeError, ValueError):
+                entitlement = 0
+            try:
+                remaining = int(premium.get("remaining") or 0)
+            except (TypeError, ValueError):
+                remaining = 0
             used = max(0, entitlement - remaining)
-            used_pct = max(0.0, 100.0 - premium.get("percent_remaining", 100.0))
+            raw_pct = premium.get("percent_remaining")
+            try:
+                pct_remaining = float(raw_pct) if raw_pct is not None else 100.0
+            except (TypeError, ValueError):
+                pct_remaining = 100.0
+            used_pct = max(0.0, 100.0 - pct_remaining)
             result.primary = RateWindow(used_percent=used_pct, resets_at=reset_dt)
             result.primary_label = f"Plan {used} / {entitlement} reqs"
         else:
