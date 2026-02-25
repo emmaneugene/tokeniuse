@@ -34,6 +34,16 @@ Configure providers in ~/.config/llmeter/settings.json[/]
 [dim]Press [bold]Escape[/bold] to close this dialog.[/]
 """
 
+NO_PROVIDERS_HELP = """\
+[bold]No providers enabled.[/]
+
+Run one of these to get started:
+  • [bold]llmeter --login claude[/]
+  • [bold]llmeter --login codex[/]
+
+Or edit [dim]~/.config/llmeter/settings.json[/dim] and set provider [bold]enabled[/] to [bold]true[/].
+"""
+
 DELAY_DISCLAIMER = "* May have reporting delays"
 DELAY_PROVIDER_IDS = {
     "anthropic-api",
@@ -107,7 +117,10 @@ class LLMeterApp(App):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with ScrollableContainer(id="main-body"):
-            yield Vertical(id="provider-list")
+            if self._config.enabled_providers:
+                yield Vertical(id="provider-list")
+            else:
+                yield Static(NO_PROVIDERS_HELP, id="empty-state")
         if any(pcfg.id in DELAY_PROVIDER_IDS for pcfg in self._config.enabled_providers):
             yield Static(DELAY_DISCLAIMER, id="legend-bar")
         yield Footer()
@@ -139,14 +152,16 @@ class LLMeterApp(App):
         self.sub_title = f"v{__version__}  •  refresh every {self._refresh_interval_text()}"
 
         # Mount placeholder cards immediately
-        container = self.query_one("#provider-list", Vertical)
-        for pcfg in self._config.enabled_providers:
-            placeholder = placeholder_result(pcfg.id)
-            card = ProviderCard(placeholder, id=f"card-{pcfg.id}")
-            self._cards[pcfg.id] = card
-            container.mount(card)
+        enabled = self._config.enabled_providers
+        if enabled:
+            container = self.query_one("#provider-list", Vertical)
+            for pcfg in enabled:
+                placeholder = placeholder_result(pcfg.id)
+                card = ProviderCard(placeholder, id=f"card-{pcfg.id}")
+                self._cards[pcfg.id] = card
+                container.mount(card)
 
-        # Kick off all provider fetches
+        # Kick off all provider fetches (no-op when nothing enabled)
         self._refresh_all()
 
         # Set up auto-refresh timer
@@ -154,16 +169,24 @@ class LLMeterApp(App):
 
     def _refresh_all(self) -> None:
         """Launch a fetch worker for each provider."""
+        enabled = self._config.enabled_providers
+        if not enabled:
+            self._refresh_in_progress = False
+            self._refresh_queued = False
+            self._pending_provider_ids = set()
+            self._update_status()
+            return
+
         if self._refresh_in_progress:
             self._refresh_queued = True
             return
 
         self._refresh_in_progress = True
         self._refresh_queued = False
-        self._pending_provider_ids = {pcfg.id for pcfg in self._config.enabled_providers}
+        self._pending_provider_ids = {pcfg.id for pcfg in enabled}
 
         self._update_status("Refreshing…")
-        for pcfg in self._config.enabled_providers:
+        for pcfg in enabled:
             self._fetch_provider(pcfg.id, pcfg.settings)
 
     @work(thread=False, group="providers")

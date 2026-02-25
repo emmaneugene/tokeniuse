@@ -192,7 +192,9 @@ def _run_snapshot(config) -> None:
     ))
 
     if not results:
-        console.print("[yellow]No provider data returned.[/]")
+        console.print("[yellow]No providers enabled.[/]")
+        console.print("Run [bold]llmeter --login claude[/] or [bold]llmeter --login codex[/] to get started.")
+        console.print("Or edit [dim]~/.config/llmeter/settings.json[/dim] and set provider [bold]enabled[/] to [bold]true[/].")
         sys.exit(0)
 
     for p in results:

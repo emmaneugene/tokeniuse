@@ -91,19 +91,8 @@ class AppConfig:
 
     @classmethod
     def default(cls) -> "AppConfig":
-        """Default config with all providers; only default-enabled ones active."""
-        from .models import PROVIDERS
-        from .backend import ALL_PROVIDER_ORDER
-        return cls(
-            providers=[
-                ProviderConfig(
-                    id=pid,
-                    enabled=PROVIDERS[pid].default_enabled,
-                )
-                for pid in ALL_PROVIDER_ORDER
-                if pid in PROVIDERS
-            ],
-        )
+        """Default runtime config (no providers enabled unless user configures them)."""
+        return cls(providers=[])
 
 
 def config_path() -> Path:
@@ -123,7 +112,6 @@ def load_config() -> AppConfig:
 
         # Filter out unknown provider IDs
         from .backend import PROVIDER_FETCHERS, ALL_PROVIDER_ORDER
-        from .models import PROVIDERS as PROVIDER_META
         valid = [p for p in cfg.providers if p.id in PROVIDER_FETCHERS]
         unknown = [p.id for p in cfg.providers if p.id not in PROVIDER_FETCHERS]
         if unknown:
@@ -137,16 +125,9 @@ def load_config() -> AppConfig:
         existing_ids = {p.id for p in valid}
         for pid in ALL_PROVIDER_ORDER:
             if pid not in existing_ids and pid in PROVIDER_FETCHERS:
-                meta = PROVIDER_META.get(pid)
-                valid.append(ProviderConfig(
-                    id=pid,
-                    enabled=meta.default_enabled if meta else False,
-                ))
+                valid.append(ProviderConfig(id=pid, enabled=False))
 
         cfg.providers = valid
-        if not any(p.enabled for p in cfg.providers):
-            # Nothing enabled — fall back to defaults
-            cfg = AppConfig.default()
         return cfg
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         import sys
@@ -155,17 +136,16 @@ def load_config() -> AppConfig:
 
 
 def init_config() -> None:
-    """Create a default config file with all providers pre-populated.
-
-    Providers that are enabled by default (codex, claude) start as
-    ``"enabled": true``; the rest start as ``"enabled": false``.
-    """
+    """Create a config file with all known providers pre-populated (disabled)."""
     path = config_path()
     if path.exists():
         print(f"Config already exists: {path}")
         return
 
-    cfg = AppConfig.default()
+    from .backend import ALL_PROVIDER_ORDER
+
+    providers = [ProviderConfig(id=pid, enabled=False) for pid in ALL_PROVIDER_ORDER]
+    cfg = AppConfig(providers=providers)
     data = {
         "providers": [p.to_dict() for p in cfg.providers],
         "refresh_interval": int(cfg.refresh_interval),

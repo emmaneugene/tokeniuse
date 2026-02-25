@@ -46,3 +46,13 @@ def test_update_status_complete_cycle_shows_last_and_error_counts() -> None:
 
     assert "Last:" in app.sub_title
     assert "1 ok, 1 err" in app.sub_title
+
+
+def test_refresh_all_with_no_enabled_providers_shows_empty_status() -> None:
+    app = LLMeterApp(config=AppConfig(providers=[], refresh_interval=120))
+
+    app._refresh_all()
+
+    assert app._refresh_in_progress is False
+    assert app._pending_provider_ids == set()
+    assert "No providers enabled" in app.sub_title

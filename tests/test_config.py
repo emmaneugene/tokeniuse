@@ -88,23 +88,10 @@ class TestAppConfig:
         ids = [p.id for p in cfg.enabled_providers]
         assert ids == ["gemini", "claude"]
 
-    def test_default_has_all_providers(self) -> None:
+    def test_default_has_no_enabled_providers(self) -> None:
         cfg = AppConfig.default()
-        assert len(cfg.providers) == 8
-        assert set(cfg.all_provider_ids) == {
-            "codex",
-            "claude",
-            "cursor",
-            "gemini",
-            "copilot",
-            "openai-api",
-            "anthropic-api",
-            "opencode",
-        }
-
-    def test_default_enables_codex_and_claude_only(self) -> None:
-        cfg = AppConfig.default()
-        assert cfg.provider_ids == ["codex", "claude"]
+        assert cfg.providers == []
+        assert cfg.provider_ids == []
 
     def test_from_dict_with_enabled_field(self) -> None:
         data = {
@@ -135,17 +122,12 @@ class TestInitConfig:
         assert "openai-api" in ids
         assert "anthropic-api" in ids
 
-    def test_init_config_default_enabled(self, tmp_config_dir: Path) -> None:
+    def test_init_config_starts_all_providers_disabled(self, tmp_config_dir: Path) -> None:
         init_config()
 
         data = json.loads(config_path().read_text())
-        by_id = {p["id"]: p for p in data["providers"]}
-
-        assert by_id["codex"]["enabled"] is True
-        assert by_id["claude"]["enabled"] is True
-        assert by_id["gemini"]["enabled"] is False
-        assert by_id["openai-api"]["enabled"] is False
-        assert by_id["anthropic-api"]["enabled"] is False
+        assert data["providers"]
+        assert all(p.get("enabled") is False for p in data["providers"])
 
     def test_init_does_not_overwrite_existing(self, tmp_config_dir: Path) -> None:
         init_config()
@@ -158,10 +140,10 @@ class TestInitConfig:
 class TestLoadConfig:
     """Test config loading from disk."""
 
-    def test_load_returns_default_when_no_file(self, tmp_config_dir: Path) -> None:
+    def test_load_returns_empty_config_when_no_file(self, tmp_config_dir: Path) -> None:
         cfg = load_config()
-        assert cfg.provider_ids == ["codex", "claude"]
-        assert len(cfg.providers) == 8
+        assert cfg.provider_ids == []
+        assert cfg.providers == []
 
     def test_load_respects_enabled_flag(self, tmp_config_dir: Path) -> None:
         data = {
@@ -297,7 +279,7 @@ class TestLoadConfig:
 
         assert path.read_text() == original  # file unchanged
 
-    def test_load_falls_back_when_nothing_enabled(self, tmp_config_dir: Path) -> None:
+    def test_load_preserves_all_disabled_config(self, tmp_config_dir: Path) -> None:
         data = {
             "providers": [
                 {"id": "codex", "enabled": False},
@@ -309,6 +291,6 @@ class TestLoadConfig:
         path.write_text(json.dumps(data))
 
         cfg = load_config()
-        # Falls back to default since nothing was enabled
-        assert "codex" in cfg.provider_ids
-        assert "claude" in cfg.provider_ids
+        assert cfg.provider_ids == []
+        assert "codex" in cfg.all_provider_ids
+        assert "claude" in cfg.all_provider_ids

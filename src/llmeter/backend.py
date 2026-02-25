@@ -75,10 +75,14 @@ async def fetch_all(
     timeout: float = 30.0,
 ) -> list[ProviderResult]:
     """Fetch usage data for all specified providers in parallel."""
-    ids = provider_ids or [
-        pid for pid in ALL_PROVIDER_ORDER
-        if PROVIDERS.get(pid, ProviderMeta(id=pid, name="", icon="", color="")).default_enabled
-    ]
+    ids = (
+        provider_ids
+        if provider_ids is not None
+        else [
+            pid for pid in ALL_PROVIDER_ORDER
+            if PROVIDERS.get(pid, ProviderMeta(id=pid, name="", icon="", color="")).default_enabled
+        ]
+    )
     settings_map = provider_settings or {}
 
     tasks = [
