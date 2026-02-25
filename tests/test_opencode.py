@@ -19,6 +19,7 @@ from llmeter.providers.api.opencode import (
     fetch_opencode_api,
     _parse_html,
     _extract_int,
+    _parse_monthly_budget_override,
     COST_UNIT,
 )
 from llmeter.models import ProviderResult, PROVIDERS
@@ -167,6 +168,22 @@ class TestOpencodeFetch:
         assert result.provider_id == "opencode"
         assert result.display_name == "Opencode Zen API"
 
+    async def test_fetch_uses_monthly_budget_override_when_provided(self) -> None:
+        with aioresponses() as mocked:
+            mocked.get(WORKSPACE_ENTRY_URL, status=200, body=SAMPLE_HTML)
+            result = await fetch_opencode_api(
+                timeout=10.0,
+                settings={
+                    "api_key": "Fe26.2**valid",
+                    "monthly_budget": "10",
+                },
+            )
+
+        assert result.primary is not None
+        assert result.primary.used_percent == pytest.approx(3.79059776 / 10.0 * 100, rel=1e-4)
+        assert result.cost is not None
+        assert result.cost.limit == 10.0
+
 
 # ── 3. HTML parsing ────────────────────────────────────────
 
@@ -204,6 +221,15 @@ class TestOpencodeHTMLParsing:
         assert result.primary is not None
         assert result.primary.used_percent == 0.0
         assert "this month" in result.primary_label
+
+    def test_parse_monthly_budget_override_replaces_platform_limit(self) -> None:
+        result = self._result()
+        _parse_html(SAMPLE_HTML, result, monthly_budget_override=10.0)
+
+        assert result.primary is not None
+        assert result.primary.used_percent == pytest.approx(3.79059776 / 10.0 * 100, rel=1e-4)
+        assert result.cost is not None
+        assert result.cost.limit == 10.0
 
     def test_parse_cost_info(self) -> None:
         result = self._result()
@@ -247,6 +273,20 @@ class TestOpencodeHTMLParsing:
         pattern = re.compile(r"val:(\d+)")
         assert _extract_int("val:42", pattern) == 42
         assert _extract_int("nothing", pattern) == 0
+
+
+class TestOpencodeBudgetOverrideParsing:
+    def test_parse_monthly_budget_override_missing(self) -> None:
+        assert _parse_monthly_budget_override({}) is None
+
+    def test_parse_monthly_budget_override_accepts_number_or_string(self) -> None:
+        assert _parse_monthly_budget_override({"monthly_budget": 20}) == 20.0
+        assert _parse_monthly_budget_override({"monthly_budget": "20"}) == 20.0
+
+    def test_parse_monthly_budget_override_ignores_invalid_or_non_positive(self) -> None:
+        assert _parse_monthly_budget_override({"monthly_budget": "abc"}) is None
+        assert _parse_monthly_budget_override({"monthly_budget": 0}) is None
+        assert _parse_monthly_budget_override({"monthly_budget": -5}) is None
 
 
 # ── 4. Provider metadata ───────────────────────────────────

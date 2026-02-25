@@ -1,7 +1,7 @@
 """opencode.ai Zen provider — tracks balance and monthly spend.
 
 Config:
-  { "id": "opencode", "api_key": "<auth-cookie-value>" }
+  { "id": "opencode", "api_key": "<auth-cookie-value>", "monthly_budget": 50.0 }
 
 Or set OPENCODE_AUTH_COOKIE env var.
 
@@ -77,6 +77,7 @@ class OpencodeProvider(ApiProvider):
         settings: dict,
     ) -> ProviderResult:
         result = PROVIDERS["opencode"].to_result(source="api")
+        monthly_budget_override = _parse_monthly_budget_override(settings)
 
         headers = {
             "Cookie": f"auth={api_key}",
@@ -121,7 +122,11 @@ class OpencodeProvider(ApiProvider):
             result.error = f"opencode.ai request failed: {e}"
             return result
 
-        _parse_html(html, result)
+        _parse_html(
+            html,
+            result,
+            monthly_budget_override=monthly_budget_override,
+        )
         result.updated_at = datetime.now(timezone.utc)
         return result
 
@@ -129,11 +134,19 @@ class OpencodeProvider(ApiProvider):
 # ── HTML / JS hydration parsing ────────────────────────────────────────────
 
 
-def _parse_html(html: str, result: ProviderResult) -> None:
+def _parse_html(
+    html: str,
+    result: ProviderResult,
+    monthly_budget_override: float | None = None,
+) -> None:
     """Extract billing data from the SolidStart JS hydration payload."""
     balance_usd = _extract_int(html, _RE_BALANCE) / COST_UNIT
     monthly_usage = _extract_int(html, _RE_MONTHLY_USAGE) / COST_UNIT
-    monthly_limit = _extract_int(html, _RE_MONTHLY_LIMIT)  # raw USD dollars (integer)
+    platform_monthly_limit = _extract_int(html, _RE_MONTHLY_LIMIT)  # raw USD dollars (integer)
+
+    monthly_limit = monthly_budget_override
+    if monthly_limit is None:
+        monthly_limit = float(platform_monthly_limit)
 
     # Primary bar: monthly spend vs limit
     if monthly_limit > 0:
@@ -160,6 +173,19 @@ def _parse_html(html: str, result: ProviderResult) -> None:
     email_match = _RE_EMAIL.search(html)
     if email_match:
         result.identity = ProviderIdentity(account_email=email_match.group(1))
+
+
+def _parse_monthly_budget_override(settings: dict) -> float | None:
+    """Return a validated monthly budget override, or None if not provided."""
+    if "monthly_budget" not in settings:
+        return None
+
+    try:
+        value = float(settings.get("monthly_budget") or 0.0)
+    except (TypeError, ValueError):
+        return None
+
+    return value if value > 0 else None
 
 
 def _extract_int(html: str, pattern: re.Pattern) -> int:

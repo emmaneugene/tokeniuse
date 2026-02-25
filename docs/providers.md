@@ -244,10 +244,16 @@ cannot be read from the browser console — extract it from DevTools
 - **Balance:** current wallet balance in USD
 - **Email:** account email extracted from the page
 
+By default, the monthly cap is synced from the Opencode Zen platform's own
+`monthlyLimit` value. If you explicitly set `monthly_budget` in
+`settings.json`, llmeter uses that value instead.
+
 **Notes:**
 
 - The page is server-side rendered (SolidStart); all billing data is
   embedded as inline JavaScript hydration — there is no separate JSON API
+- The monthly cap shown by default comes from the platform payload
+  (`monthlyLimit`); set `monthly_budget` only if you want to override it
 - All cost integers on the page are in units of 1e-8 USD; llmeter divides
   by `1e8` to get dollars
 - The session cookie uses the `@hapi/iron` sealed format (`Fe26.2**…`),
