@@ -8,6 +8,7 @@ API keys or env vars and have no interactive flow.
 from __future__ import annotations
 
 import sys
+from typing import Callable
 
 
 # ── Helpers ────────────────────────────────────────────────
@@ -87,7 +88,7 @@ def _logout_cursor() -> None:
 
 _SUBSCRIPTION_PROVIDERS = {"claude", "codex", "gemini", "copilot", "cursor"}
 
-LOGIN_HANDLERS: dict[str, object] = {
+LOGIN_HANDLERS: dict[str, Callable[[], None]] = {
     "claude":  _login_claude,
     "codex":   _login_codex,
     "gemini":  _login_gemini,
@@ -95,7 +96,7 @@ LOGIN_HANDLERS: dict[str, object] = {
     "cursor":  _login_cursor,
 }
 
-LOGOUT_HANDLERS: dict[str, object] = {
+LOGOUT_HANDLERS: dict[str, Callable[[], None]] = {
     "claude":  _logout_claude,
     "codex":   _logout_codex,
     "gemini":  _logout_gemini,
@@ -128,7 +129,7 @@ def login_provider(provider: str) -> None:
             file=sys.stderr,
         )
         sys.exit(2)
-    handler()  # type: ignore[operator]
+    handler()
 
 
 def logout_provider(provider: str) -> None:
@@ -145,4 +146,4 @@ def logout_provider(provider: str) -> None:
             file=sys.stderr,
         )
         sys.exit(2)
-    handler()  # type: ignore[operator]
+    handler()

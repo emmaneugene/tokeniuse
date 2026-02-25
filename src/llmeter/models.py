@@ -140,7 +140,7 @@ class ProviderResult:
     # Set when the provider's data has known reporting delays (e.g. API billing)
     has_reporting_delay: bool = False
 
-    def windows(self) -> list[tuple[str, "RateWindow"]]:
+    def windows(self) -> list[tuple[str, RateWindow]]:
         """Return (label, window) pairs for each non-None rate window, in order."""
         return [
             (label, window)
