@@ -285,8 +285,11 @@ class LLMeterApp(App):
     # ── Actions ────────────────────────────────────────────
 
     async def action_refresh(self) -> None:
+        prev_ids = [p.id for p in self._config.enabled_providers]
         self._reload_config()
-        await self._rebuild_provider_views()
+        new_ids = [p.id for p in self._config.enabled_providers]
+        if new_ids != prev_ids:
+            await self._rebuild_provider_views()
         self._refresh_all()
 
     def action_cycle_theme(self) -> None:

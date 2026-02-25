@@ -72,3 +72,49 @@ def test_reload_config_replaces_runtime_config(monkeypatch) -> None:
     app._reload_config()
 
     assert app._config.provider_ids == ["gemini"]
+
+
+# ── action_refresh ─────────────────────────────────────────
+
+
+async def test_action_refresh_skips_dom_rebuild_when_providers_unchanged(
+    monkeypatch,
+) -> None:
+    """action_refresh should not rebuild cards when the provider list is the same."""
+    app = _make_app()
+    rebuild_calls = []
+
+    async def fake_rebuild():
+        rebuild_calls.append(1)
+
+    monkeypatch.setattr(app, "_rebuild_provider_views", fake_rebuild)
+    monkeypatch.setattr(app, "_refresh_all", lambda: None)
+    monkeypatch.setattr("llmeter.config.load_config", lambda: app._config)
+
+    await app.action_refresh()
+
+    assert rebuild_calls == []
+
+
+async def test_action_refresh_rebuilds_dom_when_provider_list_changes(
+    monkeypatch,
+) -> None:
+    """action_refresh should rebuild cards when the enabled provider list changes."""
+    app = _make_app()
+    rebuild_calls = []
+
+    async def fake_rebuild():
+        rebuild_calls.append(1)
+
+    new_config = AppConfig(
+        providers=[ProviderConfig(id="gemini", enabled=True)],
+        refresh_interval=120,
+    )
+
+    monkeypatch.setattr(app, "_rebuild_provider_views", fake_rebuild)
+    monkeypatch.setattr(app, "_refresh_all", lambda: None)
+    monkeypatch.setattr("llmeter.config.load_config", lambda: new_config)
+
+    await app.action_refresh()
+
+    assert rebuild_calls == [1]
