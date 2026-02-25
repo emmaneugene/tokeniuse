@@ -14,7 +14,7 @@ from textual.widgets import Footer, Header, Static
 from . import __version__
 from .backend import fetch_one, placeholder_result
 from .config import AppConfig
-from .models import ProviderResult
+from .models import PROVIDERS, ProviderResult
 from .widgets.provider_card import ProviderCard
 
 
@@ -45,9 +45,8 @@ Or edit [dim]~/.config/llmeter/settings.json[/dim] and set provider [bold]enable
 """
 
 DELAY_DISCLAIMER = "* May have reporting delays"
-DELAY_PROVIDER_IDS = {
-    "anthropic-api",
-}
+# Derived from ProviderMeta.has_reporting_delay — no need to maintain separately.
+DELAY_PROVIDER_IDS = {pid for pid, meta in PROVIDERS.items() if meta.has_reporting_delay}
 
 
 class HelpScreen(ModalScreen[None]):

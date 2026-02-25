@@ -93,6 +93,13 @@ class CopilotProvider(SubscriptionProvider):
 
         try:
             data = await _fetch_copilot_user(access_token, timeout=timeout)
+        except RuntimeError as e:
+            msg = str(e)
+            # Clear stale credentials on auth failures so re-login starts clean.
+            if "Unauthorized" in msg:
+                clear_credentials()
+            result.error = msg
+            return result
         except Exception as e:
             result.error = f"Copilot API error: {e}"
             return result

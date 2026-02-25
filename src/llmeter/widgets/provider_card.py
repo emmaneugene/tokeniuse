@@ -66,11 +66,7 @@ class ProviderCard(Widget):
         """Update the border title and colour from current data."""
         d = self.data
         version = f" {d.version}" if d.version else ""
-        display_name = (
-            f"{d.display_name}*"
-            if d.provider_id == "anthropic-api"
-            else d.display_name
-        )
+        display_name = f"{d.display_name}*" if d.has_reporting_delay else d.display_name
         self.border_title = f"{d.icon}  {display_name}{version}"
         self.styles.border = ("round", d.color)
 

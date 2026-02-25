@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ...models import PROVIDERS, ProviderResult
+from ...models import PROVIDERS, ProviderMeta, ProviderResult
 
 
 class SubscriptionProvider(ABC):
@@ -57,7 +57,10 @@ class SubscriptionProvider(ABC):
         settings: dict | None = None,
     ) -> ProviderResult:
         settings = settings or {}
-        result = PROVIDERS[self.provider_id].to_result()
+        meta = PROVIDERS.get(self.provider_id) or ProviderMeta(
+            id=self.provider_id, name=self.provider_id, icon="●", color="#888888"
+        )
+        result = meta.to_result()
 
         creds = await self.get_credentials(timeout=timeout)
         if creds is None:

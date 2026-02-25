@@ -38,7 +38,19 @@ class ProviderConfig:
     @classmethod
     def from_dict(cls, d: dict) -> "ProviderConfig":
         raw_enabled = d.get("enabled", True)
-        enabled = raw_enabled if isinstance(raw_enabled, bool) else True
+        if isinstance(raw_enabled, bool):
+            enabled = raw_enabled
+        elif isinstance(raw_enabled, int):
+            # Accept 0/1 as boolean integers (common JSON mistake).
+            enabled = bool(raw_enabled)
+        else:
+            import sys
+            print(
+                f"llmeter: provider '{d.get('id', '?')}' has non-bool 'enabled' "
+                f"value {raw_enabled!r} — treating as enabled. Use true/false in JSON.",
+                file=sys.stderr,
+            )
+            enabled = True
         settings = {k: v for k, v in d.items() if k not in ("id", "enabled")}
         return cls(id=d["id"], enabled=enabled, settings=settings)
 

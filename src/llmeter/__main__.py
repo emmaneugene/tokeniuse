@@ -121,6 +121,11 @@ def main() -> None:
         from .providers.subscription.cursor import clear_credentials, load_credentials
         _clear_credentials("Cursor", load_credentials, clear_credentials)
 
+    # Subscription providers have interactive login/logout flows.
+    # API providers (anthropic-api, openai-api, opencode) use keys/env vars only.
+    # When adding a new subscription provider, both tables must be updated.
+    _SUBSCRIPTION_PROVIDERS = {"claude", "codex", "gemini", "copilot", "cursor"}
+
     login_handlers = {
         "claude": _login_claude,
         "codex": _login_codex,
@@ -136,6 +141,13 @@ def main() -> None:
         "copilot": _logout_copilot,
         "cursor": _logout_cursor,
     }
+
+    assert login_handlers.keys() == _SUBSCRIPTION_PROVIDERS, (
+        f"login_handlers missing: {_SUBSCRIPTION_PROVIDERS - login_handlers.keys()}"
+    )
+    assert logout_handlers.keys() == _SUBSCRIPTION_PROVIDERS, (
+        f"logout_handlers missing: {_SUBSCRIPTION_PROVIDERS - logout_handlers.keys()}"
+    )
 
     if args.login:
         provider = args.login.strip().lower()

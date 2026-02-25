@@ -16,6 +16,10 @@ class RateWindow:
     resets_at: Optional[datetime] = None
     reset_description: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        # Clamp at the model layer so callers never see out-of-range values.
+        self.used_percent = max(0.0, min(100.0, self.used_percent))
+
     @property
     def remaining_percent(self) -> float:
         return max(0.0, 100.0 - self.used_percent)
@@ -132,6 +136,9 @@ class ProviderResult:
     secondary_label: str = "Weekly"
     tertiary_label: str = "Sonnet"
 
+    # Set when the provider's data has known reporting delays (e.g. API billing)
+    has_reporting_delay: bool = False
+
 
 # ── Provider display metadata ──────────────────────────────────────────────
 
@@ -148,6 +155,7 @@ class ProviderMeta:
     secondary_label: str = "Weekly"
     tertiary_label: str = "Sonnet"
     default_enabled: bool = False
+    has_reporting_delay: bool = False
 
     def to_result(self, **overrides) -> ProviderResult:
         """Create a ProviderResult pre-filled with this provider's metadata."""
@@ -159,11 +167,15 @@ class ProviderMeta:
             primary_label=self.primary_label,
             secondary_label=self.secondary_label,
             tertiary_label=self.tertiary_label,
+            has_reporting_delay=self.has_reporting_delay,
         )
         kwargs.update(overrides)
         return ProviderResult(**kwargs)
 
 
+# Ordered dict — insertion order is the canonical display order used throughout
+# the app (cards, snapshot, config init).  Add new providers here; the order
+# is automatically picked up by backend.ALL_PROVIDER_ORDER.
 PROVIDERS: dict[str, ProviderMeta] = {
     "claude": ProviderMeta(
         id="claude",
@@ -184,14 +196,6 @@ PROVIDERS: dict[str, ProviderMeta] = {
         secondary_label="Weekly",
         default_enabled=True,
     ),
-    "cursor": ProviderMeta(
-        id="cursor",
-        name="Cursor",
-        icon="⦿",
-        color="#848484",
-        primary_label="Plan",
-        secondary_label="On-Demand",
-    ),
     "gemini": ProviderMeta(
         id="gemini",
         name="Gemini",
@@ -199,6 +203,14 @@ PROVIDERS: dict[str, ProviderMeta] = {
         color="#ab87ea",
         primary_label="Pro (24h)",
         secondary_label="Flash (24h)",
+    ),
+    "cursor": ProviderMeta(
+        id="cursor",
+        name="Cursor",
+        icon="⦿",
+        color="#848484",
+        primary_label="Plan",
+        secondary_label="On-Demand",
     ),
     "copilot": ProviderMeta(
         id="copilot",
@@ -213,6 +225,7 @@ PROVIDERS: dict[str, ProviderMeta] = {
         icon="◈",
         color="#d4a27f",
         primary_label="Spend",
+        has_reporting_delay=True,
     ),
     "openai-api": ProviderMeta(
         id="openai-api",

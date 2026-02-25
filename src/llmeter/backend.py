@@ -31,10 +31,10 @@ PROVIDER_FETCHERS: dict[str, FetchFunc] = {
     "opencode": fetch_opencode_api,
 }
 
-# Canonical order for all providers (used by init_config and default config).
-# The `default_enabled` flag on each ProviderMeta controls which are active
-# out of the box.
-ALL_PROVIDER_ORDER = ["codex", "claude", "cursor", "gemini", "copilot", "openai-api", "anthropic-api", "opencode"]
+# Canonical display order — derived from PROVIDERS insertion order so there is
+# a single source of truth.  The `default_enabled` flag on each ProviderMeta
+# controls which are active out of the box.
+ALL_PROVIDER_ORDER: list[str] = list(PROVIDERS)
 
 
 _FALLBACK_META = ProviderMeta(id="?", name="Unknown", icon="●", color="#888888")
@@ -80,7 +80,7 @@ async def fetch_all(
         if provider_ids is not None
         else [
             pid for pid in ALL_PROVIDER_ORDER
-            if PROVIDERS.get(pid, ProviderMeta(id=pid, name="", icon="", color="")).default_enabled
+            if PROVIDERS.get(pid, _FALLBACK_META).default_enabled
         ]
     )
     settings_map = provider_settings or {}

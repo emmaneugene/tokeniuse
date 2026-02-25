@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ...models import PROVIDERS, ProviderResult
+from ...models import PROVIDERS, ProviderMeta, ProviderResult
 
 
 class ApiProvider(ABC):
@@ -56,7 +56,10 @@ class ApiProvider(ABC):
         settings: dict | None = None,
     ) -> ProviderResult:
         settings = settings or {}
-        result = PROVIDERS[self.provider_id].to_result(source="api")
+        meta = PROVIDERS.get(self.provider_id) or ProviderMeta(
+            id=self.provider_id, name=self.provider_id, icon="●", color="#888888"
+        )
+        result = meta.to_result(source="api")
 
         api_key = self.resolve_api_key(settings)
         if not api_key:

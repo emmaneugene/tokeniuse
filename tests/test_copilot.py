@@ -227,6 +227,8 @@ class TestCopilotFetch:
 
         assert result.error is not None
         assert "Unauthorized" in result.error
+        # Stale credentials should be cleared so re-login starts clean.
+        assert load_credentials() is None
 
     async def test_403_forbidden(self, tmp_config_dir: Path) -> None:
         self._setup_creds(tmp_config_dir)
