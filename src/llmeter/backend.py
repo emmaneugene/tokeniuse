@@ -11,9 +11,9 @@ from .providers.subscription.claude import fetch_claude
 from .providers.subscription.cursor import fetch_cursor
 from .providers.subscription.gemini import fetch_gemini
 from .providers.subscription.copilot import fetch_copilot
-from .providers.api.openai_api import fetch_openai_api
-from .providers.api.anthropic_api import fetch_anthropic_api
-from .providers.api.opencode import fetch_opencode
+from .providers.api.openai import fetch_openai_api
+from .providers.api.anthropic import fetch_anthropic_api
+from .providers.api.opencode import fetch_opencode_api
 
 # Type for provider fetch functions.
 # All fetchers accept (timeout, settings) keyword args.
@@ -28,7 +28,7 @@ PROVIDER_FETCHERS: dict[str, FetchFunc] = {
     "openai-api": fetch_openai_api,
     "anthropic-api": fetch_anthropic_api,
     "copilot": fetch_copilot,
-    "opencode": fetch_opencode,
+    "opencode": fetch_opencode_api,
 }
 
 # Canonical order for all providers (used by init_config and default config).

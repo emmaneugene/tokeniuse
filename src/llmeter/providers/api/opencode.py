@@ -168,4 +168,4 @@ def _extract_int(html: str, pattern: re.Pattern) -> int:
 
 
 # Module-level singleton — used by backend.py and importable as a callable.
-fetch_opencode = OpencodeProvider()
+fetch_opencode_api = OpencodeProvider()
