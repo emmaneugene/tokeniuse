@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from dataclasses import asdict, is_dataclass
+from datetime import datetime
 
 from . import __version__
 
@@ -31,6 +34,12 @@ def main() -> None:
         help="Fetch and print data once to stdout (no TUI), with Rich formatting.",
     )
     parser.add_argument(
+        "--json",
+        dest="json_output",
+        action="store_true",
+        help="When used with --snapshot, emit JSON instead of Rich panels.",
+    )
+    parser.add_argument(
         "--init-config",
         action="store_true",
         help="Create a default config file and exit.",
@@ -54,6 +63,10 @@ def main() -> None:
 
     if args.login and args.logout:
         print("Specify only one of --login or --logout.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.json_output and not args.snapshot:
+        print("--json can only be used with --snapshot.", file=sys.stderr)
         sys.exit(2)
 
     def _enable_and_login(provider_id: str, login_func) -> None:
@@ -160,7 +173,7 @@ def main() -> None:
         )
 
     if args.snapshot:
-        _run_snapshot(config)
+        _run_snapshot(config, json_output=args.json_output)
         return
 
     from .app import LLMeterApp
@@ -169,8 +182,8 @@ def main() -> None:
     app.run()
 
 
-def _run_snapshot(config) -> None:
-    """Non-interactive mode: fetch data once and print with Rich."""
+def _run_snapshot(config, json_output: bool = False) -> None:
+    """Non-interactive mode: fetch data once and print with Rich or JSON."""
     import asyncio
 
     from rich.console import Console
@@ -190,6 +203,11 @@ def _run_snapshot(config) -> None:
             p.id: p.settings for p in config.enabled_providers if p.settings
         },
     ))
+
+    if json_output:
+        payload = [_to_jsonable(result) for result in results]
+        print(json.dumps(payload, indent=2))
+        return
 
     if not results:
         console.print("[yellow]No providers enabled.[/]")
@@ -266,6 +284,19 @@ def _run_snapshot(config) -> None:
         console.print(Panel(body, title=title, border_style=p.color))
 
     console.print()
+
+
+def _to_jsonable(value):
+    """Recursively convert dataclasses/datetimes to JSON-serializable values."""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if is_dataclass(value):
+        return {k: _to_jsonable(v) for k, v in asdict(value).items()}
+    if isinstance(value, dict):
+        return {k: _to_jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_jsonable(v) for v in value]
+    return value
 
 
 def _rich_bar(used_pct: float, width: int = 20) -> str:
