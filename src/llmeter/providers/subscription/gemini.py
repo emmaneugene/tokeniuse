@@ -45,7 +45,6 @@ SCOPES = (
 CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com"
 USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
 PROVIDER_ID = "google-gemini-cli"
-_EXPIRY_BUFFER_MS = 5 * 60 * 1000
 
 # ── Provider API constants ─────────────────────────────────
 
@@ -161,7 +160,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "type": "oauth",
         "refresh": new_refresh,
         "access": new_access,
-        "expires": _now_ms() + int(expires_in) * 1000 - _EXPIRY_BUFFER_MS,
+        "expires": _now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
         "projectId": creds.get("projectId", ""),
         "email": email,
     }

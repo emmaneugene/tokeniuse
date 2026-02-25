@@ -20,7 +20,6 @@ from .claude import (
     REDIRECT_URI,
     SCOPES,
     PROVIDER_ID,
-    _EXPIRY_BUFFER_MS,
     _now_ms,
     save_credentials,
 )
@@ -101,7 +100,7 @@ class ClaudeLogin(LoginProvider):
             "type": "oauth",
             "refresh": token_data["refresh_token"],
             "access": token_data["access_token"],
-            "expires": _now_ms() + token_data["expires_in"] * 1000 - _EXPIRY_BUFFER_MS,
+            "expires": _now_ms() + token_data["expires_in"] * 1000 - auth.EXPIRY_BUFFER_MS,
         }
         save_credentials(creds)
         print(f"✓ Claude OAuth credentials saved to {auth._auth_path()}")

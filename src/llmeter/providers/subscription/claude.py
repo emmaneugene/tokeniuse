@@ -32,7 +32,6 @@ TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
 REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback"
 SCOPES = "org:create_api_key user:profile user:inference"
 PROVIDER_ID = "anthropic"
-_EXPIRY_BUFFER_MS = 5 * 60 * 1000
 
 # ── Provider API constants ─────────────────────────────────
 
@@ -119,7 +118,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "type": "oauth",
         "refresh": token_data.get("refresh_token", refresh_token),
         "access": token_data["access_token"],
-        "expires": _now_ms() + token_data["expires_in"] * 1000 - _EXPIRY_BUFFER_MS,
+        "expires": _now_ms() + token_data["expires_in"] * 1000 - auth.EXPIRY_BUFFER_MS,
     }
     save_credentials(new_creds)
     return new_creds

@@ -34,7 +34,6 @@ REDIRECT_URI = "http://localhost:1455/auth/callback"
 SCOPES = "openid profile email offline_access"
 JWT_CLAIM_PATH = "https://api.openai.com/auth"
 PROVIDER_ID = "openai-codex"
-_EXPIRY_BUFFER_MS = 5 * 60 * 1000
 
 # ── Provider API constants ─────────────────────────────────
 
@@ -155,7 +154,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "type": "oauth",
         "access": access_token,
         "refresh": new_refresh,
-        "expires": _now_ms() + int(expires_in) * 1000 - _EXPIRY_BUFFER_MS,
+        "expires": _now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
         "accountId": account_id,
     }
     if email:
