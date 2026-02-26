@@ -25,7 +25,6 @@ from .gemini import (
     REDIRECT_URI,
     SCOPES,
     CODE_ASSIST_ENDPOINT,
-    _now_ms,
     _get_user_email,
     save_credentials,
 )
@@ -187,7 +186,7 @@ class GeminiLogin(LoginProvider):
             "type": "oauth",
             "refresh": refresh_token,
             "access": access_token,
-            "expires": _now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
+            "expires": auth.now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
             "projectId": project_id,
             "email": email,
         }

@@ -7,7 +7,6 @@ automatically from then on.
 from __future__ import annotations
 
 import base64
-import time
 from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlencode
@@ -52,10 +51,6 @@ LOAD_CODE_ASSIST_ENDPOINT = f"{CODE_ASSIST_ENDPOINT}/v1internal:loadCodeAssist"
 
 
 # ── Credential management ──────────────────────────────────
-
-def _now_ms() -> int:
-    return int(time.time() * 1000)
-
 
 def load_credentials() -> Optional[dict]:
     """Load Gemini credentials from the unified auth store."""
@@ -159,7 +154,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "type": "oauth",
         "refresh": new_refresh,
         "access": new_access,
-        "expires": _now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
+        "expires": auth.now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
         "projectId": creds.get("projectId", ""),
         "email": email,
     }

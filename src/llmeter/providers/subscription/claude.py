@@ -7,7 +7,6 @@ automatically from then on.
 from __future__ import annotations
 
 import base64
-import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -49,10 +48,6 @@ _CLAUDE_HEADERS = lambda token: {  # noqa: E731
 
 
 # ── Credential management ──────────────────────────────────
-
-def _now_ms() -> int:
-    return int(time.time() * 1000)
-
 
 def load_credentials() -> Optional[dict]:
     """Load Claude OAuth credentials from the unified auth store."""
@@ -118,7 +113,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "type": "oauth",
         "refresh": token_data.get("refresh_token", refresh_token),
         "access": token_data["access_token"],
-        "expires": _now_ms() + token_data["expires_in"] * 1000 - auth.EXPIRY_BUFFER_MS,
+        "expires": auth.now_ms() + token_data["expires_in"] * 1000 - auth.EXPIRY_BUFFER_MS,
     }
     save_credentials(new_creds)
     return new_creds

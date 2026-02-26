@@ -18,7 +18,6 @@ from .codex import (
     TOKEN_URL,
     REDIRECT_URI,
     SCOPES,
-    _now_ms,
     save_credentials,
     extract_account_id,
     extract_email,
@@ -217,7 +216,7 @@ def _exchange_code_sync(code: str, verifier: str) -> dict:
         "type": "oauth",
         "access": access_token,
         "refresh": refresh_token,
-        "expires": _now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
+        "expires": auth.now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
         "accountId": account_id,
     }
     if email:

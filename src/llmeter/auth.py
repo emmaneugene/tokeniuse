@@ -48,7 +48,7 @@ def _auth_path() -> Path:
     return config_dir("auth.json")
 
 
-def _now_ms() -> int:
+def now_ms() -> int:
     """Current time in milliseconds since epoch."""
     return int(time.time() * 1000)
 
@@ -114,4 +114,4 @@ def clear_provider(provider_id: str) -> None:
 def is_expired(creds: dict) -> bool:
     """Check if credentials have expired (with buffer)."""
     expires = creds.get("expires", 0)
-    return _now_ms() >= expires
+    return now_ms() >= expires

@@ -6,7 +6,6 @@ automatically from then on.
 
 from __future__ import annotations
 
-import time
 from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlencode
@@ -41,10 +40,6 @@ USAGE_URL = "https://chatgpt.com/backend-api/wham/usage"
 
 
 # ── Credential management ──────────────────────────────────
-
-def _now_ms() -> int:
-    return int(time.time() * 1000)
-
 
 def extract_account_id(access_token: str) -> Optional[str]:
     """Extract the chatgpt_account_id from an OpenAI access token JWT."""
@@ -152,7 +147,7 @@ async def refresh_access_token(creds: dict, timeout: float = 30.0) -> dict:
         "type": "oauth",
         "access": access_token,
         "refresh": new_refresh,
-        "expires": _now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
+        "expires": auth.now_ms() + int(expires_in) * 1000 - auth.EXPIRY_BUFFER_MS,
         "accountId": account_id,
     }
     if email:
