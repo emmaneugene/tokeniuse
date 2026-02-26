@@ -139,8 +139,13 @@ class ProviderResult:
 
     @property
     def cost_is_primary_display(self) -> bool:
-        """True when the primary bar already shows cost (e.g. '$3.79 / $20')."""
-        return bool(self.primary and "$" in self.primary_label)
+        """True for API billing providers, whose primary bar shows spend not %.
+
+        API providers (source == "api") use cost as their primary metric.
+        Subscription providers (source == "oauth" / "cookie") are percentage-based;
+        any CostInfo they carry is extra/secondary usage (e.g. Claude overage).
+        """
+        return self.source == "api"
 
     def windows(self) -> list[tuple[str, RateWindow]]:
         """Return (label, window) pairs for each non-None rate window, in order."""

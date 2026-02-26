@@ -47,8 +47,8 @@ src/llmeter/
 
 Providers are split into two categories, each with its own base class:
 
-- **`SubscriptionProvider`** (`subscription/base.py`) — OAuth / cookie auth. Subclasses implement `get_credentials(timeout)` and `_fetch(creds, timeout, settings)`. The base `__call__` handles the shared lifecycle: credential guard, delegation, exception wrapping.
-- **`ApiProvider`** (`api/base.py`) — API-key billing. Subclasses implement `resolve_api_key(settings)` and `_fetch(api_key, timeout, settings)`.
+- **`SubscriptionProvider`** (`subscription/base.py`) — OAuth / cookie auth. Subclasses implement `get_credentials(timeout)` and `_fetch(creds, timeout, settings)`. The base `__call__` handles the shared lifecycle: credential guard, delegation, exception wrapping. **Tracking model: percentage-based** — primary metric is `RateWindow.used_percent`. Any `CostInfo` they carry is secondary (e.g. Claude overage spend). Results have `source == "oauth"` or `"cookie"`.
+- **`ApiProvider`** (`api/base.py`) — API-key billing. Subclasses implement `resolve_api_key(settings)` and `_fetch(api_key, timeout, settings)`. **Tracking model: cost-based** — primary metric is dollar spend shown via `CostInfo`; a `RateWindow` is also populated to drive the progress bar (spend % of budget). Results always have `source == "api"`, which is the canonical signal that cost is the primary display (see `ProviderResult.cost_is_primary_display`).
 - **`LoginProvider`** (`subscription/base.py`) — interactive setup flow. Subclasses implement `interactive_login() -> dict`. No shared runtime behaviour; the base exists to enforce the interface.
 
 Each provider module (`<name>.py`) owns its full runtime path: OAuth constants, credential management (`load/save/clear`, token refresh, `get_valid_*`), the provider class, and a module-level callable singleton (`fetch_<name> = <Name>Provider()`).
@@ -57,12 +57,18 @@ Each login module (`<name>_login.py`) owns only the one-time setup machinery (PK
 
 Singletons are registered in `backend.py` via the `PROVIDER_FETCHERS` dict.
 
-**To add a new subscription provider:**
+**To add a new subscription provider (percentage-based):**
 1. Add a `ProviderMeta` entry to `models.py` `PROVIDERS`.
 2. Create `providers/subscription/<name>.py` — implement `SubscriptionProvider`, include credential management.
 3. Create `providers/subscription/<name>_login.py` — implement `LoginProvider` with the interactive flow.
 4. Register `fetch_<name>` in `backend.py` `PROVIDER_FETCHERS`.
-5. Add `_login_<name>` / `_logout_<name>` handlers in `__main__.py`.
+5. Add `_login_<name>` / `_logout_<name>` handlers in `cli/auth.py`.
+
+**To add a new API billing provider (cost-based):**
+1. Add a `ProviderMeta` entry to `models.py` `PROVIDERS`.
+2. Create `providers/api/<name>.py` — implement `ApiProvider`. Populate `RateWindow` for the bar and `CostInfo` for structured cost data. The base class stamps `source="api"` automatically.
+3. Register `fetch_<name>` in `backend.py` `PROVIDER_FETCHERS`.
+4. No login module needed — credentials come from config `api_key` or an env var resolved in `resolve_api_key()`.
 
 ### Configuration
 
