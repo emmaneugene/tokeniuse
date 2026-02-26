@@ -12,39 +12,32 @@ subscriptions. `llmeter` helps you do that without toggling between multiple app
 ## Features
 
 There are a bunch of tools out there that do similar things, but I found that they were either too complex and invasive,
-or lacking in features. Here's what `llmeter` does:
+or lacking in features. Here's what `llmeter` offers:
 
 - **Usage tracking for subscription and API providers**
-  - For subscriptions (e.g. Claude, Codex, Cursor), quota follows their respective usage reporting format
-  - For API providers (e.g. Anthropic, OpenAI, OpenCode Zen), the quota is spend for the current month with optional
-    budget settings
-- **Self-contained** — Login once with OAuth or manually enter cookies/API keys. No dependencies on other having apps
+  - For subscriptions (e.g. Claude, Codex, Cursor), reporting follows providers' respective formats.
+  - For API providers (e.g. Anthropic, OpenAI, OpenCode Zen), it tracks API spend for the current month with respect
+    to a fixed monthly budget.
+- **Self-contained**: Login once with OAuth or manually enter cookies/API keys. No dependencies on having other apps
   running or scraping from local storage. You know exactly how secrets are being fetched and stored.
-- **Simple state** — All the state the app needs is persisted at `~/.config/llmeter`
-- **Interactive and static usage** — View as an auto-refreshing TUI, or just get a one-time snapshot. Supports JSON
-  output for programmability.
+- **Interactive or static usage** — View in a TUI with auto-refresh or just get a one-time snapshot. Also supports JSON
+  output which you can build workflows on top of.
+- **Simple**: Pure Python, minimal dependencies, no system permissions required. App state is fully persisted at `$XDG_CONFIG_HOME/llmeter`.
 
 ## Supported Providers
 
-### Subscription-based
+| Provider             | ID              | Type         | Auth type  |
+| -------------------- | --------------- | ------------ | ---------- |
+| **OpenAI ChatGPT**   | `codex`         | Subscription | OAuth      |
+| **Anthropic Claude** | `claude`        | Subscription | OAuth      |
+| **Google Gemini**    | `gemini`        | Subscription | OAuth      |
+| **GitHub Copilot**   | `copilot`       | Subscription | OAuth      |
+| **Cursor**           | `cursor`        | Subscription | Cookie     |
+| **OpenAI API**       | `openai-api`    | API usage    | API key    |
+| **Anthropic API**    | `anthropic-api` | API usage    | API key    |
+| **Opencode Zen**     | `opencode`      | API usage    | Cookie     |
 
-| Provider             | ID        | How it works        | Auth                      |
-| -------------------- | --------- | ------------------- | ------------------------- |
-| **OpenAI ChatGPT**   | `codex`   | OAuth               | `llmeter --login codex`   |
-| **Anthropic Claude** | `claude`  | OAuth               | `llmeter --login claude`  |
-| **Google Gemini**    | `gemini`  | OAuth               | `llmeter --login gemini`  |
-| **GitHub Copilot**   | `copilot` | OAuth (Device Flow) | `llmeter --login copilot` |
-| **Cursor**           | `cursor`  | Cookie              | `llmeter --login cursor`  |
-
-### API usage
-
-| Provider          | ID              | How it works                        | Auth          |
-| ----------------- | --------------- | ----------------------------------- | ------------- |
-| **OpenAI API**    | `openai-api`    | `GET /v1/organization/costs`        | Admin API key |
-| **Anthropic API** | `anthropic-api` | `GET /v1/organizations/cost_report` | Admin API key |
-| **Opencode Zen**  | `opencode`      | Scrapes workspace page              | Auth cookie   |
-
-> Note: Anthropic API spend data can lag behind real-time usage.
+>     Note: Anthropic API spend data can lag 1 day behind real-time usage.
 
 For more information on how usage data is fetched and parsed, see the [docs](./docs/).
 
@@ -54,9 +47,7 @@ For more information on how usage data is fetched and parsed, see the [docs](./d
 
 ## Install
 
-### For global usage
-
-Install with `uv`:
+With `uv`:
 
 ```bash
 # Install
@@ -92,6 +83,8 @@ pip uninstall llmeter
 ### Local development
 
 ```bash
+uv venv
+source .venv/bin/activate
 uv sync --extra dev
 ```
 
@@ -121,17 +114,13 @@ Generate a default:
 llmeter --init-config
 ```
 
-Provider-specific settings:
-
-| Setting          | Applies to                                | Description                                     |
-| ---------------- | ----------------------------------------- | ----------------------------------------------- |
-| `monthly_budget` | `openai-api`, `anthropic-api`, `opencode` | Budget in USD — spend shown as a percentage bar |
-
 ### Auth secrets
 
 All secrets (OAuth tokens, API keys, auth cookies) are stored in `~/.config/llmeter/auth.json`, created with `0600`
 permissions. Run `llmeter --login <provider>` to set credentials — this saves them to `auth.json` and enables the
 provider in `settings.json` automatically.
+
+For example:
 
 ```json
 {
@@ -189,11 +178,7 @@ To inspect provider HTTP request/response metadata without disrupting the TUI, e
 LLMETER_DEBUG_HTTP=1 llmeter
 ```
 
-Logs are written as JSON lines to:
-
-```
-~/.config/llmeter/debug.log
-```
+Logs are written as JSON lines to `~/.config/llmeter/debug.log`
 
 Optional custom path:
 
@@ -206,11 +191,10 @@ with user-only permissions when possible (`0600`).
 
 ## Contributing
 
-If this turns out to be popular enough, I'll look into adding support for more providers and features. As it stands right now the app fits my needs well enough!
+As it stands right now the app fits my needs well enough, but I'm happy to accept contributions for more providers!
 
-
-## References
+## See also
 
 - **[CodexBar](https://github.com/steipete/CodexBar)** — Original inspiration
 - **[pi-mono](https://github.com/badlogic/pi-mono)** — Referenced for OAuth implementations, and my daily driver
-- **[ccusage](https://github.com/ryoppippi/ccusage)** — Also very useful for cost tracking
+- **[ccusage](https://github.com/ryoppippi/ccusage)** — Also useful for cost tracking
