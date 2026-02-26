@@ -137,6 +137,11 @@ class ProviderResult:
     secondary_label: str = ""
     tertiary_label: str = ""
 
+    @property
+    def cost_is_primary_display(self) -> bool:
+        """True when the primary bar already shows cost (e.g. '$3.79 / $20')."""
+        return bool(self.primary and "$" in self.primary_label)
+
     def windows(self) -> list[tuple[str, RateWindow]]:
         """Return (label, window) pairs for each non-None rate window, in order."""
         return [

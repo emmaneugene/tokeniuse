@@ -71,8 +71,7 @@ def run_snapshot(config, json_output: bool = False) -> None:
         if p.credits and p.credits.remaining > 0:
             lines.append(f"  [bright_cyan]Credits: {p.credits.remaining:,.2f} left[/bright_cyan]")
 
-        is_cost_primary = "$" in p.primary_label if p.primary else False
-        if p.cost and not is_cost_primary:
+        if p.cost and not p.cost_is_primary_display:
             cost = p.cost
             if cost.limit > 0:
                 cost_pct = min(100.0, (cost.used / cost.limit) * 100.0)

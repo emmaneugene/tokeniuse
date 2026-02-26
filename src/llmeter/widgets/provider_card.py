@@ -126,8 +126,7 @@ class ProviderCard(Widget):
 
         # Cost / extra usage — shown as a bar.
         # Skip if the provider already uses cost as its primary display.
-        is_cost_primary = "$" in d.primary_label if d.primary else False
-        if d.cost and not is_cost_primary:
+        if d.cost and not d.cost_is_primary_display:
             cost = d.cost
             if cost.limit > 0:
                 cost_pct = min(100.0, (cost.used / cost.limit) * 100.0)
