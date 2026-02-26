@@ -125,6 +125,52 @@ def http_debug_log(
 _BODY_PREVIEW = 200  # chars to include in default error messages
 
 
+async def _http_request(
+    method: str,
+    provider: str,
+    url: str,
+    headers: dict,
+    timeout: float,
+    *,
+    label: str,
+    errors: dict[int, str],
+    params: dict | None = None,
+    payload: dict | None = None,
+    session: aiohttp.ClientSession,
+) -> dict:
+    """Shared core for http_get / http_post: log, request, validate, parse."""
+    http_debug_log(
+        provider, f"{label}_request",
+        method=method, url=url, headers=headers, payload=payload or params,
+    )
+    request_kwargs: dict = {
+        "headers": headers,
+        "timeout": aiohttp.ClientTimeout(total=timeout),
+    }
+    if params is not None:
+        request_kwargs["params"] = params
+    if payload is not None:
+        request_kwargs["json"] = payload
+
+    async with session.request(method, url, **request_kwargs) as resp:
+        http_debug_log(
+            provider, f"{label}_response",
+            method=method, url=url, status=resp.status,
+        )
+        if resp.status in errors:
+            raise RuntimeError(errors[resp.status])
+        if resp.status != 200:
+            body = await resp.text()
+            raise RuntimeError(f"HTTP {resp.status}: {body[:_BODY_PREVIEW]}")
+        try:
+            return await resp.json(content_type=None)
+        except (json.JSONDecodeError, ValueError) as exc:
+            ct = resp.headers.get("Content-Type", "unknown")
+            raise RuntimeError(
+                f"Expected JSON but got {ct!r} (HTTP {resp.status})"
+            ) from exc
+
+
 async def http_get(
     provider: str,
     url: str,
@@ -144,38 +190,14 @@ async def http_get(
     error messages; unmatched non-200 statuses fall back to
     ``"HTTP {status}: {body[:200]}"``.
     """
-    errors = errors or {}
     close_session = session is None
     if close_session:
         session = aiohttp.ClientSession()
-
     try:
-        http_debug_log(
-            provider, f"{label}_request",
-            method="GET", url=url, headers=headers, payload=params,
+        return await _http_request(
+            "GET", provider, url, headers, timeout,
+            label=label, errors=errors or {}, params=params, session=session,
         )
-        async with session.get(
-            url,
-            headers=headers,
-            params=params,
-            timeout=aiohttp.ClientTimeout(total=timeout),
-        ) as resp:
-            http_debug_log(
-                provider, f"{label}_response",
-                method="GET", url=url, status=resp.status,
-            )
-            if resp.status in errors:
-                raise RuntimeError(errors[resp.status])
-            if resp.status != 200:
-                body = await resp.text()
-                raise RuntimeError(f"HTTP {resp.status}: {body[:_BODY_PREVIEW]}")
-            try:
-                return await resp.json(content_type=None)
-            except (json.JSONDecodeError, ValueError) as exc:
-                ct = resp.headers.get("Content-Type", "unknown")
-                raise RuntimeError(
-                    f"Expected JSON but got {ct!r} (HTTP {resp.status})"
-                ) from exc
     finally:
         if close_session:
             await session.close()
@@ -198,38 +220,14 @@ async def http_post(
     is used as-is and not closed; otherwise a fresh session is created and
     closed after the request.
     """
-    errors = errors or {}
     close_session = session is None
     if close_session:
         session = aiohttp.ClientSession()
-
     try:
-        http_debug_log(
-            provider, f"{label}_request",
-            method="POST", url=url, headers=headers, payload=payload,
+        return await _http_request(
+            "POST", provider, url, headers, timeout,
+            label=label, errors=errors or {}, payload=payload, session=session,
         )
-        async with session.post(
-            url,
-            json=payload,
-            headers=headers,
-            timeout=aiohttp.ClientTimeout(total=timeout),
-        ) as resp:
-            http_debug_log(
-                provider, f"{label}_response",
-                method="POST", url=url, status=resp.status,
-            )
-            if resp.status in errors:
-                raise RuntimeError(errors[resp.status])
-            if resp.status != 200:
-                body = await resp.text()
-                raise RuntimeError(f"HTTP {resp.status}: {body[:_BODY_PREVIEW]}")
-            try:
-                return await resp.json(content_type=None)
-            except (json.JSONDecodeError, ValueError) as exc:
-                ct = resp.headers.get("Content-Type", "unknown")
-                raise RuntimeError(
-                    f"Expected JSON but got {ct!r} (HTTP {resp.status})"
-                ) from exc
     finally:
         if close_session:
             await session.close()
