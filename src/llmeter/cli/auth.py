@@ -104,14 +104,6 @@ LOGOUT_HANDLERS: dict[str, Callable[[], None]] = {
     "cursor":  _logout_cursor,
 }
 
-assert LOGIN_HANDLERS.keys() == _SUBSCRIPTION_PROVIDERS, (
-    f"LOGIN_HANDLERS missing: {_SUBSCRIPTION_PROVIDERS - LOGIN_HANDLERS.keys()}"
-)
-assert LOGOUT_HANDLERS.keys() == _SUBSCRIPTION_PROVIDERS, (
-    f"LOGOUT_HANDLERS missing: {_SUBSCRIPTION_PROVIDERS - LOGOUT_HANDLERS.keys()}"
-)
-
-
 # ── Public dispatch ────────────────────────────────────────
 
 

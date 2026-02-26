@@ -7,6 +7,21 @@ import sys
 import pytest
 
 from llmeter import __main__ as cli
+from llmeter.cli.auth import LOGIN_HANDLERS, LOGOUT_HANDLERS, _SUBSCRIPTION_PROVIDERS
+
+
+def test_login_handlers_cover_all_subscription_providers() -> None:
+    """Every subscription provider must have a --login handler."""
+    assert LOGIN_HANDLERS.keys() == _SUBSCRIPTION_PROVIDERS, (
+        f"LOGIN_HANDLERS missing: {_SUBSCRIPTION_PROVIDERS - LOGIN_HANDLERS.keys()}"
+    )
+
+
+def test_logout_handlers_cover_all_subscription_providers() -> None:
+    """Every subscription provider must have a --logout handler."""
+    assert LOGOUT_HANDLERS.keys() == _SUBSCRIPTION_PROVIDERS, (
+        f"LOGOUT_HANDLERS missing: {_SUBSCRIPTION_PROVIDERS - LOGOUT_HANDLERS.keys()}"
+    )
 
 
 @pytest.mark.parametrize(
