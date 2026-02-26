@@ -7,7 +7,7 @@ A CLI tool to monitor your LLM subscription and API limits.
 ## Overview
 
 AI-assisted coding is here to stay, and at some point you'll probably be trying to manage your usage on some paid
-subscriptions. `llmeter` helps you do that without leaving the comfort of the CLI.
+subscriptions. `llmeter` helps you do that without toggling between multiple apps or leaving the comfort of the CLI.
 
 ## Features
 
@@ -127,11 +127,59 @@ Provider-specific settings:
 | ---------------- | ----------------------------------------- | ----------------------------------------------- |
 | `monthly_budget` | `openai-api`, `anthropic-api`, `opencode` | Budget in USD — spend shown as a percentage bar |
 
-### Secret storage
+### Auth secrets
 
 All secrets (OAuth tokens, API keys, auth cookies) are stored in `~/.config/llmeter/auth.json`, created with `0600`
 permissions. Run `llmeter --login <provider>` to set credentials — this saves them to `auth.json` and enables the
 provider in `settings.json` automatically.
+
+```json
+{
+  "openai-codex": {
+    "type": "oauth",
+    "access": "***",
+    "refresh": "***",
+    "expires": 1740589200000,
+    "accountId": "user-***",
+    "email": "user@example.com"
+  },
+  "anthropic": {
+    "type": "oauth",
+    "refresh": "***",
+    "access": "***",
+    "expires": 1740589200000
+  },
+  "google-gemini-cli": {
+    "type": "oauth",
+    "refresh": "***",
+    "access": "***",
+    "expires": 1740589200000,
+    "projectId": "gemini-cli-proj-3a7f2b9e",
+    "email": "user@example.com"
+  },
+  "github-copilot": {
+    "type": "oauth",
+    "access": "ghu_***"
+  },
+  "cursor": {
+    "type": "cookie",
+    "cookie": "WorkosCursorSessionToken=***",
+    "email": "user@example.com"
+  },
+  "anthropic-api": {
+    "type": "api_key",
+    "api_key": "sk-ant-admin***"
+  },
+  "openai-api": {
+    "type": "api_key",
+    "api_key": "sk-admin-***"
+  },
+  "opencode": {
+    "type": "api_key",
+    "api_key": "Fe26.2***"
+  }
+}
+```
 
 ### HTTP debug logging
 
@@ -155,6 +203,11 @@ LLMETER_DEBUG_HTTP=1 LLMETER_DEBUG_LOG_PATH=/tmp/llmeter-debug.log llmeter
 
 Logs include full request metadata (including auth headers/tokens/cookies when present). The debug log file is written
 with user-only permissions when possible (`0600`).
+
+## Contributing
+
+If this turns out to be popular enough, I'll look into adding support for more providers and features. As it stands right now the app fits my needs well enough!
+
 
 ## References
 
