@@ -38,13 +38,14 @@ OAUTH_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 OAUTH_PROFILE_URL = "https://api.anthropic.com/api/oauth/profile"
 BETA_HEADER = "oauth-2025-04-20"
 
-_CLAUDE_HEADERS = lambda token: {  # noqa: E731
-    "Authorization": f"Bearer {token}",
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-    "anthropic-beta": BETA_HEADER,
-    "User-Agent": "LLMeter/0.1.0",
-}
+def _claude_headers(token: str) -> dict:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "anthropic-beta": BETA_HEADER,
+        "User-Agent": "LLMeter/0.1.0",
+    }
 
 
 # ── Credential management ──────────────────────────────────
@@ -162,7 +163,7 @@ class ClaudeProvider(SubscriptionProvider):
 
         try:
             usage = await http_get(
-                "claude", OAUTH_USAGE_URL, _CLAUDE_HEADERS(access_token), timeout,
+                "claude", OAUTH_USAGE_URL, _claude_headers(access_token), timeout,
                 label="usage",
                 errors={
                     401: (
@@ -241,7 +242,7 @@ async def _fetch_account_info(
     """Fetch account email and plan from the OAuth profile endpoint."""
     try:
         data = await http_get(
-            "claude", OAUTH_PROFILE_URL, _CLAUDE_HEADERS(access_token), min(timeout, 10),
+            "claude", OAUTH_PROFILE_URL, _claude_headers(access_token), min(timeout, 10),
             label="profile",
         )
     except Exception:
