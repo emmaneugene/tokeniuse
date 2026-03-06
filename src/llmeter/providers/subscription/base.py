@@ -62,12 +62,11 @@ class SubscriptionProvider(ABC):
         )
         result = meta.to_result()
 
-        creds = await self.get_credentials(timeout=timeout)
-        if creds is None:
-            result.error = self.no_credentials_error
-            return result
-
         try:
+            creds = await self.get_credentials(timeout=timeout)
+            if creds is None:
+                result.error = self.no_credentials_error
+                return result
             return await self._fetch(creds, timeout=timeout, settings=settings)
         except Exception as e:
             result.error = str(e) or type(e).__name__

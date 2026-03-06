@@ -165,8 +165,12 @@ async def get_valid_credentials(timeout: float = 30.0) -> Optional[dict]:
     if is_token_expired(creds):
         try:
             creds = await refresh_access_token(creds, timeout=timeout)
-        except RuntimeError:
-            return None
+        except RuntimeError as e:
+            raise RuntimeError(
+                "Stored Codex credentials expired and token refresh failed. "
+                "Run `llmeter --login codex` to re-authenticate. "
+                f"Details: {e}"
+            ) from e
     return creds
 
 

@@ -131,6 +131,21 @@ class TestCodexCredentials:
             with pytest.raises(RuntimeError, match="Token refresh failed"):
                 await refresh_access_token(creds)
 
+    async def test_fetch_reports_refresh_failure(self, tmp_config_dir: Path) -> None:
+        save_credentials({
+            "type": "oauth", "access": "x", "refresh": "bad",
+            "expires": 0, "accountId": "acct",
+        })
+
+        with aioresponses() as mocked:
+            mocked.post(TOKEN_URL, status=400, body="Bad Request")
+
+            result = await fetch_codex(timeout=5.0)
+
+        assert result.error is not None
+        assert "token refresh failed" in result.error.lower()
+        assert "re-authenticate" in result.error
+
 
 # ── 2. Usage endpoint calls ────────────────────────────────
 

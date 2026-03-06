@@ -106,6 +106,20 @@ class TestClaudeCredentials:
         result = await get_valid_access_token()
         assert result is None
 
+    async def test_fetch_reports_refresh_failure(self, tmp_config_dir: Path) -> None:
+        save_credentials({
+            "type": "oauth", "refresh": "bad-token", "access": "old", "expires": 0,
+        })
+
+        with aioresponses() as mocked:
+            mocked.post(TOKEN_URL, status=401, body="Unauthorized")
+
+            result = await fetch_claude(timeout=5.0)
+
+        assert result.error is not None
+        assert "token refresh failed" in result.error.lower()
+        assert "re-authenticate" in result.error
+
 
 # ── 2. Usage endpoint calls ────────────────────────────────
 
