@@ -33,6 +33,8 @@ Timestamps are in milliseconds since epoch.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Optional
@@ -71,14 +73,30 @@ def load_all() -> dict[str, dict]:
 
 
 def _save_all(data: dict[str, dict]) -> None:
-    """Write the entire auth.json with restricted permissions."""
+    """Write the entire auth.json atomically with restricted permissions."""
     path = _auth_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n")
+
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    tmp_path = Path(tmp_name)
     try:
-        path.chmod(0o600)
-    except OSError:
-        pass
+        try:
+            os.chmod(tmp_path, 0o600)
+        except OSError:
+            pass
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(json.dumps(data, indent=2) + "\n")
+        os.replace(tmp_path, path)
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
 
 
 # ── Per-provider operations ────────────────────────────────

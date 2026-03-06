@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import aiohttp
 import pytest
 from aioresponses import aioresponses
 
-from llmeter.providers.helpers import http_get, http_post
+from llmeter.providers.helpers import http_debug_log, http_get, http_post
 
 TEST_URL = "https://example.test/api/v1/resource"
 
@@ -136,3 +138,20 @@ class TestHttpPost:
                 )
                 assert not session.closed
         assert result == {"ok": True}
+
+
+class TestHttpDebugLog:
+    def test_debug_log_created_with_private_permissions(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        log_path = tmp_path / "debug.log"
+        monkeypatch.setenv("LLMETER_DEBUG_HTTP", "1")
+        monkeypatch.setenv("LLMETER_DEBUG_LOG_PATH", str(log_path))
+
+        http_debug_log("test", "request", method="GET", url="https://example.test")
+
+        assert log_path.exists()
+        mode = log_path.stat().st_mode & 0o777
+        assert mode == 0o600
