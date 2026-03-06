@@ -30,9 +30,9 @@ async def test_openai_monthly_budget_invalid_value_disables_budget(monkeypatch) 
     provider = OpenAIApiProvider()
     result = await provider._fetch("sk-test", timeout=1.0, settings={"monthly_budget": "abc"})
 
-    assert result.primary is not None
-    assert result.primary.used_percent == 0.0
+    assert result.primary is None
     assert result.cost is not None
+    assert result.cost.used == 10.0
     assert result.cost.limit == 0.0
 
 
@@ -74,7 +74,7 @@ async def test_anthropic_monthly_budget_negative_disables_budget(monkeypatch) ->
         settings={"monthly_budget": -1},
     )
 
-    assert result.primary is not None
-    assert result.primary.used_percent == 0.0
+    assert result.primary is None
     assert result.cost is not None
+    assert result.cost.used == 12.5
     assert result.cost.limit == 0.0

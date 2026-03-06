@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.containers import Vertical
 from textual.widgets import Static
 
-from llmeter.models import ProviderIdentity, PROVIDERS, RateWindow
+from llmeter.models import CostInfo, ProviderIdentity, PROVIDERS, RateWindow
 from llmeter.widgets.provider_card import ProviderCard
 from llmeter.widgets.usage_bar import UsageBar
 
@@ -63,3 +63,23 @@ def test_provider_card_data_state_contains_expected_rows() -> None:
     assert any(isinstance(row, Static) and "bar-label" in row.classes for row in rows)
     assert any(isinstance(row, Static) and "reset-info" in row.classes for row in rows)
     assert any(isinstance(row, Static) and "card-meta" in row.classes for row in rows)
+
+
+def test_provider_card_shows_text_only_spend_for_api_without_budget() -> None:
+    result = PROVIDERS["openai-api"].to_result(
+        source="api",
+        cost=CostInfo(used=12.34, limit=0.0, currency="USD", period="Monthly"),
+    )
+    card = ProviderCard(result)
+
+    children = card._make_children()
+
+    assert len(children) == 1
+    assert isinstance(children[0], Vertical)
+
+    rows = list(children[0]._pending_children)
+    assert sum(isinstance(row, UsageBar) for row in rows) == 0
+    assert any(
+        isinstance(row, Static) and "Spend: " in str(row.renderable)
+        for row in rows
+    )

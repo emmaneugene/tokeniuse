@@ -96,8 +96,6 @@ class AnthropicApiProvider(ApiProvider):
                 period="Monthly",
             )
         else:
-            result.primary = RateWindow(used_percent=0.0)
-            result.primary_label = f"Spend: ${total_spend:,.2f} this month"
             result.cost = CostInfo(
                 used=total_spend,
                 limit=0.0,

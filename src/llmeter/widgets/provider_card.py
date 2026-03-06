@@ -124,9 +124,16 @@ class ProviderCard(Widget):
                 ),
             ))
 
-        # Cost / extra usage — shown as a bar.
-        # Skip if the provider already uses cost as its primary display.
-        if d.cost and not d.cost_is_primary_display:
+        # Cost display.
+        if d.cost and d.cost_is_primary_display and d.cost.limit <= 0:
+            period = "month" if d.cost.period.lower() == "monthly" else d.cost.period.lower()
+            rows.append(Static(
+                Text.assemble(
+                    ("  Spend: ", "bold"),
+                    (f"${d.cost.used:,.2f} this {period}", "bright_cyan"),
+                ),
+            ))
+        elif d.cost and not d.cost_is_primary_display:
             cost = d.cost
             if cost.limit > 0:
                 cost_pct = min(100.0, (cost.used / cost.limit) * 100.0)

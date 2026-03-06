@@ -71,7 +71,12 @@ def run_snapshot(config, json_output: bool = False) -> None:
         if p.credits and p.credits.remaining > 0:
             lines.append(f"  [bright_cyan]Credits: {p.credits.remaining:,.2f} left[/bright_cyan]")
 
-        if p.cost and not p.cost_is_primary_display:
+        if p.cost and p.cost_is_primary_display and p.cost.limit <= 0:
+            period = "month" if p.cost.period.lower() == "monthly" else p.cost.period.lower()
+            lines.append(
+                f"  [bright_cyan]Spend: ${p.cost.used:,.2f} this {period}[/bright_cyan]"
+            )
+        elif p.cost and not p.cost_is_primary_display:
             cost = p.cost
             if cost.limit > 0:
                 cost_pct = min(100.0, (cost.used / cost.limit) * 100.0)

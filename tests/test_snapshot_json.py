@@ -8,7 +8,7 @@ import pytest
 
 from llmeter.cli.snapshot import run_snapshot as _run_snapshot
 from llmeter.config import AppConfig, ProviderConfig
-from llmeter.models import PROVIDERS, ProviderIdentity, RateWindow
+from llmeter.models import CostInfo, PROVIDERS, ProviderIdentity, RateWindow
 
 
 def _config() -> AppConfig:
@@ -67,3 +67,27 @@ def test_json_flag_requires_snapshot(monkeypatch, capsys) -> None:
 
     assert exc.value.code == 2
     assert "--json can only be used with --snapshot" in capsys.readouterr().err
+
+
+def test_snapshot_rich_shows_text_only_spend_for_api_without_budget(
+    monkeypatch,
+    capsys,
+) -> None:
+    async def fake_fetch_all(*args, **kwargs):
+        return [
+            PROVIDERS["openai-api"].to_result(
+                source="api",
+                cost=CostInfo(used=12.34, limit=0.0, currency="USD", period="Monthly"),
+            )
+        ]
+
+    monkeypatch.setattr("llmeter.backend.fetch_all", fake_fetch_all)
+
+    _run_snapshot(
+        AppConfig(providers=[ProviderConfig(id="openai-api", enabled=True)], refresh_interval=120),
+        json_output=False,
+    )
+
+    out = capsys.readouterr().out
+    assert "Spend: $12.34 this month" in out
+    assert "0% used" not in out

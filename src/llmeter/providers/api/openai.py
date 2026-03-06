@@ -94,9 +94,6 @@ class OpenAIApiProvider(ApiProvider):
                 period="Monthly",
             )
         else:
-            # No budget — show just the spend amount as a label with 0% bar
-            result.primary = RateWindow(used_percent=0.0)
-            result.primary_label = f"Spend: ${total_spend:,.2f} this month"
             result.cost = CostInfo(
                 used=total_spend,
                 limit=0.0,
