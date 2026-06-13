@@ -27,9 +27,12 @@ from .base import SubscriptionProvider
 
 _CLIENT_ID_B64 = "OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl"
 CLIENT_ID = base64.b64decode(_CLIENT_ID_B64).decode()
-TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
-REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback"
-SCOPES = "org:create_api_key user:profile user:inference"
+TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
+REDIRECT_URI = "https://platform.claude.com/oauth/code/callback"
+SCOPES = (
+    "org:create_api_key user:profile user:inference "
+    "user:sessions:claude_code user:mcp_servers user:file_upload"
+)
 PROVIDER_ID = "anthropic"
 
 # ── Provider API constants ─────────────────────────────────
